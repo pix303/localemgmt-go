@@ -4,4 +4,4 @@ tasks:
   run:
     cmds:
       - clear
-      - go run eventstore-go-v2/cmd/eventstore-go-v2/main.go 
+      - go run api/cmd/web-api/main.go 

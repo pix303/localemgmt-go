@@ -2,14 +2,14 @@ package store
 
 import (
 	"github.com/pix303/eventstore-go-v2/internal/repository"
-	"github.com/pix303/eventstore-go-v2/pkg/domain"
+	"github.com/pix303/eventstore-go-v2/pkg/events"
 )
 
 type EventStoreRepository interface {
-	Append(event domain.StoreEvent) (domain.StoreEvent, error)
-	RetriveByID(id string) (domain.StoreEvent, bool, error)
-	RetriveByAggregateID(id string) ([]domain.StoreEvent, bool, error)
-	RetriveByAggregateName(name string) ([]domain.StoreEvent, bool, error)
+	Append(event events.AggregateEvent) (bool, error)
+	RetriveByID(id string) (*events.AggregateEvent, bool, error)
+	RetriveByAggregateID(id string) ([]events.AggregateEvent, bool, error)
+	RetriveByAggregateName(name string) ([]events.AggregateEvent, bool, error)
 }
 
 type EventStore struct {
@@ -29,31 +29,31 @@ func WithInMemoryRepository(store *EventStore) error {
 	return nil
 }
 
-func (store *EventStore) Add(event domain.StoreEvent) (domain.StoreEvent, error) {
+func (store *EventStore) Add(event events.AggregateEvent) (bool, error) {
 	result, err := store.repository.Append(event)
 	return result, err
 }
 
-func (store *EventStore) GetByName(aggregateName string) ([]domain.StoreEvent, error) {
+func (store *EventStore) GetByName(aggregateName string) ([]events.AggregateEvent, error) {
 	result, ok, err := store.repository.RetriveByAggregateName(aggregateName)
 	if ok {
 		return result, nil
 	}
-	return []domain.StoreEvent{}, err
+	return []events.AggregateEvent{}, err
 }
 
-func (store *EventStore) GetByID(aggregateID string) ([]domain.StoreEvent, error) {
+func (store *EventStore) GetByID(aggregateID string) ([]events.AggregateEvent, error) {
 	result, ok, err := store.repository.RetriveByAggregateID(aggregateID)
 	if ok {
 		return result, nil
 	}
-	return []domain.StoreEvent{}, err
+	return []events.AggregateEvent{}, err
 }
 
-func (store *EventStore) GetByEventID(ID string) (domain.StoreEvent, bool, error) {
+func (store *EventStore) GetByEventID(ID string) (*events.AggregateEvent, bool, error) {
 	result, ok, err := store.repository.RetriveByID(ID)
 	if ok {
 		return result, ok, nil
 	}
-	return domain.StoreEvent{}, ok, err
+	return nil, ok, err
 }

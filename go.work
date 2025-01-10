@@ -3,3 +3,7 @@ go 1.23.4
 use ./eventstore-go-v2
 
 use ./api
+
+use ./domain
+
+use ./pubsub

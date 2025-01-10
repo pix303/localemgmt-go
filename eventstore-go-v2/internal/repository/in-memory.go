@@ -1,33 +1,32 @@
 package repository
 
 import (
-	"errors"
-
-	"github.com/pix303/eventstore-go-v2/pkg/domain"
+	"github.com/pix303/eventstore-go-v2/pkg/errors"
+	"github.com/pix303/eventstore-go-v2/pkg/events"
 )
 
 type InMemoryRepository struct {
-	events []domain.StoreEvent
+	events []events.AggregateEvent
 }
 
-func (repo *InMemoryRepository) Append(event domain.StoreEvent) (domain.StoreEvent, error) {
+func (repo *InMemoryRepository) Append(event events.AggregateEvent) (bool, error) {
 	repo.events = append(repo.events, event)
-	return event, nil
+	return true, nil
 }
 
-func (repo *InMemoryRepository) RetriveByID(id string) (domain.StoreEvent, bool, error) {
+func (repo *InMemoryRepository) RetriveByID(id string) (*events.AggregateEvent, bool, error) {
 	for _, evt := range repo.events {
-		if evt.ID == id {
-			return evt, true, nil
+		if evt.GetID() == id {
+			return &evt, true, nil
 		}
 	}
-	return domain.StoreEvent{}, false, errors.New("not found")
+	return nil, false, errors.NotFoundAggregateID
 }
 
-func (repo *InMemoryRepository) RetriveByAggregateID(id string) ([]domain.StoreEvent, bool, error) {
-	result := []domain.StoreEvent{}
+func (repo *InMemoryRepository) RetriveByAggregateID(id string) ([]events.AggregateEvent, bool, error) {
+	result := []events.AggregateEvent{}
 	for _, evt := range repo.events {
-		if evt.AggregateID == id {
+		if evt.GetAggregateID() == id {
 			result = append(result, evt)
 		}
 	}
@@ -35,13 +34,13 @@ func (repo *InMemoryRepository) RetriveByAggregateID(id string) ([]domain.StoreE
 	if len(result) > 0 {
 		return result, true, nil
 	}
-	return []domain.StoreEvent{}, false, errors.New("not found")
+	return []events.AggregateEvent{}, false, errors.NotFoundAggregateID
 }
 
-func (repo *InMemoryRepository) RetriveByAggregateName(name string) ([]domain.StoreEvent, bool, error) {
-	result := []domain.StoreEvent{}
+func (repo *InMemoryRepository) RetriveByAggregateName(name string) ([]events.AggregateEvent, bool, error) {
+	result := []events.AggregateEvent{}
 	for _, evt := range repo.events {
-		if evt.AggregateName == name {
+		if evt.GetAggregateName() == name {
 			result = append(result, evt)
 		}
 	}
@@ -49,5 +48,5 @@ func (repo *InMemoryRepository) RetriveByAggregateName(name string) ([]domain.St
 	if len(result) > 0 {
 		return result, true, nil
 	}
-	return []domain.StoreEvent{}, false, errors.New("not found")
+	return []events.AggregateEvent{}, false, errors.NotFoundAggregateID
 }

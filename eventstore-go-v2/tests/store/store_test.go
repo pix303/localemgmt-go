@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/pix303/eventstore-go-v2/pkg/domain"
+	"github.com/pix303/eventstore-go-v2/pkg/events"
 	"github.com/pix303/eventstore-go-v2/pkg/store"
 )
 
@@ -17,17 +17,21 @@ func exitWithError(err error) {
 	}
 }
 
+type FakePayload struct {
+	data string
+}
+
 func TestStore_ok(t *testing.T) {
 	store, err := store.NewEventStore(store.WithInMemoryRepository)
 	exitWithError(err)
+	payload := FakePayload{"hello"}
+	evt := events.NewStoreEvent("some-event", "something", "misterX", payload)
 
-	evt := domain.NewStoreEvent("some-event", "something")
-
-	storedEvent, err := store.Add(evt)
+	_, err = store.Add(evt)
 	exitWithError(err)
 
-	if storedEvent.EventType != "some-event" {
-		exitWithError(errors.New(fmt.Sprintf("expect some-event, got %s", storedEvent.EventType)))
+	if evt.EventType != "some-event" {
+		exitWithError(errors.New(fmt.Sprintf("expect some-event, got %s", evt.EventType)))
 	}
 
 	_, err = store.Add(evt)
@@ -54,8 +58,10 @@ func TestStore_ok(t *testing.T) {
 		exitWithError(errors.New(fmt.Sprintf("expect to be found , got %v", ok)))
 	}
 
-	if resultByID.AggregateName != "something" {
-		t.Errorf("event aggregate name must be something istead of %s", resultByID.AggregateName)
-		exitWithError(errors.New(fmt.Sprintf("expect to be something, got %v", resultByID.AggregateName)))
+	finalResultByID := *resultByID
+
+	if finalResultByID.GetAggregateName() != "something" {
+		t.Errorf("event aggregate name must be something istead of %s", finalResultByID.GetAggregateName())
+		exitWithError(errors.New(fmt.Sprintf("expect to be something, got %v", finalResultByID.GetAggregateName())))
 	}
 }

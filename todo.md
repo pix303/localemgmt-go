@@ -7,9 +7,8 @@
 ## api
 
 - `localeitem/`
-    - create
-    - update 
-    - delete 
+    - ok -  create
+    - ok -  update 
     - get detail
     - search by context + lang + content
 
@@ -17,5 +16,9 @@
     - update contexts 
     - get detail
 
+## projections
 
+- channel
+- localeitem detail
+- translation list
 
