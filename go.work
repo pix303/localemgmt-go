@@ -5,5 +5,3 @@ use ./eventstore-go-v2
 use ./api
 
 use ./domain
-
-use ./pubsub

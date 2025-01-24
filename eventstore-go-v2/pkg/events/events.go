@@ -10,6 +10,7 @@ type AggregateEvent interface {
 	GetID() string
 	GetAggregateID() string
 	GetAggregateName() string
+	GetEventType() string
 }
 
 type StoreEvent[T any] struct {
@@ -46,4 +47,8 @@ func (se StoreEvent[T]) GetAggregateID() string {
 
 func (se StoreEvent[T]) GetAggregateName() string {
 	return se.AggregateName
+}
+
+func (se StoreEvent[T]) GetEventType() string {
+	return se.EventType
 }

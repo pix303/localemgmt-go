@@ -22,7 +22,7 @@ type FakePayload struct {
 }
 
 func TestStore_ok(t *testing.T) {
-	store, err := store.NewEventStore(store.WithInMemoryRepository)
+	store, err := store.NewEventStore([]store.EventStoreConfig{store.WithInMemoryRepository})
 	exitWithError(err)
 	payload := FakePayload{"hello"}
 	evt := events.NewStoreEvent("some-event", "something", "misterX", payload)

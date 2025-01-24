@@ -15,5 +15,5 @@ func main() {
 	}
 
 	fmt.Println("Starting server on port 8080")
-	http.ListenAndServe(":8080", r.Router)
+	log.Fatalf("Error: %v", http.ListenAndServe(":8080", r.Router))
 }

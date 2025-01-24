@@ -1,14 +1,15 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/pix303/eventstore-go-v2/pkg/broker"
 	"github.com/pix303/eventstore-go-v2/pkg/errors"
 	"github.com/pix303/eventstore-go-v2/pkg/store"
 	"github.com/pix303/localemgmt-go/api/internal/dto"
 	"github.com/pix303/localemgmt-go/domain/pkg/localeitem/events"
-	"github.com/pix303/localemgmt-go/pubsub/pkg/broker"
 )
 
 var (
@@ -17,18 +18,50 @@ var (
 )
 
 type LocaleItemHandler struct {
-	eventStore       store.EventStore
-	projectionBroker *broker.Broker
+	eventStore store.EventStore
+}
+
+const projectionTopic = "projection"
+
+func projectionHandler(c chan broker.BrokerMessage, store *store.EventStore) {
+	for {
+		msg := <-c
+		fmt.Printf("this is the event msg that i just recived %s\n\n", msg)
+		evts, _, err := store.Repository.RetriveByAggregateID(msg.AggregateID)
+		if err != nil {
+			fmt.Println(fmt.Errorf("error on retrive aggregate events: %v", err))
+		}
+		fmt.Printf("ho many events: %d\n", len(evts))
+	}
+}
+
+func ConfigWithProjectionBorker(chanReciever func(c chan broker.BrokerMessage, store *store.EventStore)) store.EventStoreConfig {
+	c := make(chan broker.BrokerMessage)
+
+	return func(store *store.EventStore) error {
+		store.ProjectionBroker = broker.NewBroker()
+		store.ProjectionBroker.SubscribeWithChan(projectionTopic, c)
+		store.ProjectionTopic = projectionTopic
+		go chanReciever(c, store)
+		return nil
+	}
 }
 
 func NewLocaleItemHandler() (LocaleItemHandler, error) {
-	es, err := store.NewEventStore(store.WithInMemoryRepository)
+	fc := ConfigWithProjectionBorker(projectionHandler)
+	configs := []store.EventStoreConfig{
+		store.WithInMemoryRepository,
+		fc,
+	}
+
+	es, err := store.NewEventStore(configs)
+
 	if err != nil {
 		return LocaleItemHandler{}, err
 	}
+
 	return LocaleItemHandler{
 		es,
-		broker.NewBroker(),
 	}, nil
 }
 

@@ -30,6 +30,5 @@ func NewRouter() (*LocaleItemRouter, error) {
 	localeItemGroup.POST("/update", localeHanderl.UpdateTranslation)
 
 	router := LocaleItemRouter{r}
-
 	return &router, nil
 }

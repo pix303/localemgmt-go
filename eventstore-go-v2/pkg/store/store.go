@@ -2,6 +2,7 @@ package store
 
 import (
 	"github.com/pix303/eventstore-go-v2/internal/repository"
+	"github.com/pix303/eventstore-go-v2/pkg/broker"
 	"github.com/pix303/eventstore-go-v2/pkg/events"
 )
 
@@ -13,29 +14,44 @@ type EventStoreRepository interface {
 }
 
 type EventStore struct {
-	repository EventStoreRepository
+	Repository       EventStoreRepository
+	ProjectionBroker *broker.Broker
+	ProjectionTopic  string
 }
 
 type EventStoreConfig func(store *EventStore) error
 
-func NewEventStore(configure EventStoreConfig) (EventStore, error) {
+func NewEventStore(configures []EventStoreConfig) (EventStore, error) {
 	store := EventStore{}
-	err := configure(&store)
-	return store, err
+	for _, c := range configures {
+		err := c(&store)
+		if err != nil {
+			return store, err
+		}
+	}
+	return store, nil
 }
 
 func WithInMemoryRepository(store *EventStore) error {
-	store.repository = &repository.InMemoryRepository{}
+	store.Repository = &repository.InMemoryRepository{}
 	return nil
 }
 
 func (store *EventStore) Add(event events.AggregateEvent) (bool, error) {
-	result, err := store.repository.Append(event)
+	result, err := store.Repository.Append(event)
+	if err != nil {
+		return false, err
+	}
+
+	if store.ProjectionBroker != nil {
+		p := broker.NewBrokerMessage(event.GetAggregateID(), event.GetEventType(), nil)
+		store.ProjectionBroker.Publish(store.ProjectionTopic, p)
+	}
 	return result, err
 }
 
 func (store *EventStore) GetByName(aggregateName string) ([]events.AggregateEvent, error) {
-	result, ok, err := store.repository.RetriveByAggregateName(aggregateName)
+	result, ok, err := store.Repository.RetriveByAggregateName(aggregateName)
 	if ok {
 		return result, nil
 	}
@@ -43,7 +59,7 @@ func (store *EventStore) GetByName(aggregateName string) ([]events.AggregateEven
 }
 
 func (store *EventStore) GetByID(aggregateID string) ([]events.AggregateEvent, error) {
-	result, ok, err := store.repository.RetriveByAggregateID(aggregateID)
+	result, ok, err := store.Repository.RetriveByAggregateID(aggregateID)
 	if ok {
 		return result, nil
 	}
@@ -51,7 +67,7 @@ func (store *EventStore) GetByID(aggregateID string) ([]events.AggregateEvent, e
 }
 
 func (store *EventStore) GetByEventID(ID string) (*events.AggregateEvent, bool, error) {
-	result, ok, err := store.repository.RetriveByID(ID)
+	result, ok, err := store.Repository.RetriveByID(ID)
 	if ok {
 		return result, ok, nil
 	}
