@@ -9,6 +9,7 @@ import (
 	"github.com/pix303/eventstore-go-v2/pkg/errors"
 	"github.com/pix303/eventstore-go-v2/pkg/store"
 	"github.com/pix303/localemgmt-go/api/internal/dto"
+	"github.com/pix303/localemgmt-go/domain/pkg/localeitem/aggregate"
 	"github.com/pix303/localemgmt-go/domain/pkg/localeitem/events"
 )
 
@@ -32,6 +33,9 @@ func projectionHandler(c chan broker.BrokerMessage, store *store.EventStore) {
 			fmt.Println(fmt.Errorf("error on retrive aggregate events: %v", err))
 		}
 		fmt.Printf("ho many events: %d\n", len(evts))
+		aggregate := aggregate.NewLocaleItemAggregate()
+		aggregate.Reduce(evts)
+		fmt.Printf("%+v\n", aggregate)
 	}
 }
 
