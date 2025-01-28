@@ -24,7 +24,7 @@ type LocaleItemHandler struct {
 
 const projectionTopic = "projection"
 
-func projectionHandler(c chan broker.BrokerMessage, store *store.EventStore) {
+func detailHandler(c chan broker.BrokerMessage, store *store.EventStore) {
 	for {
 		msg := <-c
 		fmt.Printf("this is the event msg that i just recived %s\n\n", msg)
@@ -39,23 +39,13 @@ func projectionHandler(c chan broker.BrokerMessage, store *store.EventStore) {
 	}
 }
 
-func ConfigWithProjectionBorker(chanReciever func(c chan broker.BrokerMessage, store *store.EventStore)) store.EventStoreConfig {
-	c := make(chan broker.BrokerMessage)
-
-	return func(store *store.EventStore) error {
-		store.ProjectionBroker = broker.NewBroker()
-		store.ProjectionBroker.SubscribeWithChan(projectionTopic, c)
-		store.ProjectionTopic = projectionTopic
-		go chanReciever(c, store)
-		return nil
-	}
-}
-
 func NewLocaleItemHandler() (LocaleItemHandler, error) {
-	fc := ConfigWithProjectionBorker(projectionHandler)
-	configs := []store.EventStoreConfig{
+	pms := map[string]store.ProjectionChannelHandler{
+		"detail": detailHandler,
+	}
+	configs := []store.EventStoreConfigurator{
 		store.WithInMemoryRepository,
-		fc,
+		store.PrepareProjectionHandlersConfig(pms),
 	}
 
 	es, err := store.NewEventStore(configs)

@@ -1,0 +1,3 @@
+[submodule "eventstore-go-v2"]
+	path = eventstore-go-v2
+	url = https://github.com/pix303/eventstore-go-v2.git

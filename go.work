@@ -3,3 +3,5 @@ go 1.23.4
 use ./api
 
 use ./domain
+
+use ./eventstore-go-v2
