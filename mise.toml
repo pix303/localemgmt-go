@@ -1,0 +1,5 @@
+[tasks.dev]
+run = [
+       'clear',
+       'go run api/cmd/web-api/main.go'
+]
