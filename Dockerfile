@@ -1,22 +1,26 @@
 FROM golang:1.23-alpine AS builder
 
-WORKDIR /app
+WORKDIR /workspace
+COPY ./api/go.mod ./api/
+COPY ./api/go.sum ./api/
 
-COPY ./api/go.mod ./
-COPY ./api/go.sum ./
-RUN ./api/go mod download
+WORKDIR /workspace/api
+RUN go mod download
+RUN go mod verify
 
-COPY /api .
+WORKDIR /workspace
+COPY . .
 
-RUN GOOS=linux go build -o api .
+RUN CGO_ENABLED=0 GOOS=linux go build -o api-app ./api/cmd/web-api/main.go
 
-FROM alpine:latest  
+
+FROM alpine:latest AS runner
 RUN apk --no-cache add ca-certificates
 
 WORKDIR /root/
 
-COPY --from=builder /app/api .
+COPY --from=builder /workspace/api-app .
 
 EXPOSE 8080
 
-CMD ["./api"]
+CMD ["./api-app"]
