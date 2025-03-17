@@ -32,9 +32,11 @@ func detailHandler(c chan broker.BrokerMessage, store *store.EventStore) {
 		evts, _, err := store.Repository.RetriveByAggregateID(msg.AggregateID)
 		if err != nil {
 			slog.Warn(FailToRetriveAggregateEvents, slog.String("error", err.Error()))
+			return
 		}
 		aggregate := aggregate.NewLocaleItemAggregate()
 		aggregate.Reduce(evts)
+		slog.Info("aggregate detail created", slog.Any("item", aggregate))
 		// TODO: storage file
 	}
 }
@@ -45,7 +47,7 @@ func NewLocaleItemHandler() (LocaleItemHandler, error) {
 	}
 
 	configs := []store.EventStoreConfigurator{
-		store.WithInMemoryRepository,
+		store.NewPostgresqlRepository(),
 		store.NewProjectionHandlersConfig(pms),
 	}
 
@@ -73,7 +75,11 @@ func (h *LocaleItemHandler) CreateLocaleItem(c echo.Context) error {
 		return ErrorVerifyRequest
 	}
 
-	evt := events.NewCreateEvent(payload.Content, payload.Context, payload.Lang, "todo")
+	evt, err := events.NewCreateEvent(payload.Content, payload.Context, payload.Lang, "todo")
+
+	if err != nil {
+		return err
+	}
 
 	result, err := h.eventStore.Add(evt)
 
@@ -102,7 +108,10 @@ func (h *LocaleItemHandler) UpdateTranslation(c echo.Context) error {
 		return ErrorVerifyAggregateExistence
 	}
 
-	evt := events.NewUpdateEvent(payload.AggregateId, payload.Content, payload.Lang, "todo")
+	evt, err := events.NewUpdateEvent(payload.AggregateId, payload.Content, payload.Lang, "todo")
+	if err != nil {
+		return err
+	}
 
 	result, err := h.eventStore.Add(evt)
 

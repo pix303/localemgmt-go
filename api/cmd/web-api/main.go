@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"os"
 
@@ -16,7 +15,8 @@ func main() {
 
 	r, err := router.NewRouter()
 	if err != nil {
-		log.Fatalf("Error on startup router: %v", err)
+		slog.Error("Error on startup router", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	slog.Info("Starting server on port 8080")

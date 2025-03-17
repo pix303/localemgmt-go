@@ -9,20 +9,25 @@ const LocaleItemAggregateName = "localeitem"
 const CreateLocaleItemStoreEventType = "created-localeitem"
 
 type CreateLocaleItemPayload struct {
+	events.StoreEvent
 	Content string
 	Context string
 	Lang    string
 }
 
-func NewCreateEvent(content string, context string, lang string, userID string) events.StoreEvent[CreateLocaleItemPayload] {
-
+func NewCreateEvent(content string, context string, lang string, userID string) (events.StoreEvent, error) {
 	payload := CreateLocaleItemPayload{
-		content,
-		context,
-		lang,
+		Content: content,
+		Context: context,
+		Lang:    lang,
 	}
 
-	return events.NewStoreEvent(CreateLocaleItemStoreEventType, LocaleItemAggregateName, userID, payload)
+	evt, err := events.NewStoreEvent(CreateLocaleItemStoreEventType, LocaleItemAggregateName, userID, payload, nil)
+	if err != nil {
+		return evt, err
+	}
+
+	return evt, nil
 }
 
 const UpdateTranslationStoreEventType = "update-translation"
@@ -32,14 +37,12 @@ type UpdateTranslationLocaleItemPayload struct {
 	Lang    string
 }
 
-func NewUpdateEvent(aggregateID string, content string, lang string, userID string) events.StoreEvent[UpdateTranslationLocaleItemPayload] {
-
+func NewUpdateEvent(aggregateID string, content string, lang string, userID string) (events.StoreEvent, error) {
 	payload := UpdateTranslationLocaleItemPayload{
 		content,
 		lang,
 	}
 
-	se := events.NewStoreEvent(UpdateTranslationStoreEventType, LocaleItemAggregateName, userID, payload)
-	se.AggregateID = aggregateID
-	return se
+	evt, err := events.NewStoreEvent(UpdateTranslationStoreEventType, LocaleItemAggregateName, userID, payload, &aggregateID)
+	return evt, err
 }

@@ -1,9 +1,11 @@
 package aggregate
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/pix303/eventstore-go-v2/pkg/events"
+	"github.com/pix303/eventstore-go-v2/pkg/utils"
 	domain "github.com/pix303/localemgmt-go/domain/pkg/localeitem/events"
 )
 
@@ -27,7 +29,8 @@ func NewTranslationItem(lang, content, userId string) TranslationItem {
 	}
 }
 
-func (item *TranslationItem) UpdateTranslationItem(content, userId string) {
+func (item *TranslationItem) UpdateTranslationItem(lang, content, userId string) {
+	item.Lang = lang
 	item.Content = content
 	item.UpdatedBy = userId
 	item.UpdatedAt = time.Now()
@@ -41,47 +44,76 @@ type LocaleItemAggregate struct {
 
 func NewLocaleItemAggregate() LocaleItemAggregate {
 	return LocaleItemAggregate{
-		// todo: how to better init stirngs that will contains some valuable value
+		// todo: how to better init strings that will contains some valuable value
 		"no-code",
 		"no-context",
-		// todo: ho to better init an array?
+		// todo: how to better init an array?
 		make([]TranslationItem, 5),
 	}
 }
 
-func (a *LocaleItemAggregate) Reduce(evts []events.AggregateEvent) {
+func (a *LocaleItemAggregate) Reduce(evts []events.StoreEvent) {
 	for _, evt := range evts {
 		a.Apply(evt)
 	}
 }
 
-func (a *LocaleItemAggregate) Apply(evt events.AggregateEvent) {
-	switch evt.GetEventType() {
+func (a *LocaleItemAggregate) Apply(evt events.StoreEvent) {
+	switch evt.EventType {
 	case domain.CreateLocaleItemStoreEventType:
-		a.init(evt.(events.StoreEvent[domain.CreateLocaleItemPayload]))
+		a.init(evt)
 	case domain.UpdateTranslationStoreEventType:
-		a.update(evt.(events.StoreEvent[domain.UpdateTranslationLocaleItemPayload]))
+		a.update(evt)
 	}
 }
 
-func (item *LocaleItemAggregate) init(evt events.StoreEvent[domain.CreateLocaleItemPayload]) {
-	item.AggregateID = evt.GetAggregateID()
-	item.Context = evt.GetAggregateID()
-	item.Context = evt.PayloadData.Context
-	item.Translations = append(item.Translations, NewTranslationItem(evt.PayloadData.Lang, evt.PayloadData.Content, "todo"))
+func (item *LocaleItemAggregate) init(evt events.StoreEvent) {
+	createPayloadEvent, err := utils.DecodePayload[domain.CreateLocaleItemPayload](evt.PayloadData)
+	if err != nil {
+		slog.Error("error on decode payload", slog.String("payloadDataType", evt.PayloadDataType))
+	}
+	item.AggregateID = evt.AggregateID
+	item.Context = createPayloadEvent.Context
+	item.Translations = append(item.Translations, NewTranslationItem(
+		createPayloadEvent.Lang,
+		createPayloadEvent.Content,
+		createPayloadEvent.CreatedBy,
+	),
+	)
 }
 
-func (item *LocaleItemAggregate) update(evt events.StoreEvent[domain.UpdateTranslationLocaleItemPayload]) {
-	newTranslation := NewTranslationItem(evt.PayloadData.Lang, evt.PayloadData.Content, "todo")
-	updateOrInsert(item.Translations, newTranslation)
-}
+func (item *LocaleItemAggregate) update(evt events.StoreEvent) {
+	updatePayloadEvent, err := utils.DecodePayload[domain.UpdateTranslationLocaleItemPayload](evt.PayloadData)
 
-func updateOrInsert(items []TranslationItem, newItem TranslationItem) []TranslationItem {
-	for idx, titem := range items {
-		if titem.Lang == newItem.Lang {
-			items[idx] = newItem
-			return items
+	if err != nil {
+		slog.Error("error on decode payload", slog.String("payloadDataType", evt.PayloadDataType))
+	}
+
+	foundLang := false
+	for i := 0; i < len(item.Translations); i++ {
+		t := &item.Translations[i]
+		if t.Lang == updatePayloadEvent.Lang {
+			slog.Info("on lang", slog.String("l", t.Lang))
+			t.Content = updatePayloadEvent.Content
+			t.UpdatedAt = time.Now()
+			t.UpdatedBy = evt.CreatedBy
+			foundLang = true
+			break
 		}
 	}
-	return append(items, newItem)
+
+	if !foundLang {
+		nt := NewTranslationItem(updatePayloadEvent.Lang, updatePayloadEvent.Content, "todo")
+		item.Translations = append(item.Translations, nt)
+	}
 }
+
+// func updateOrInsert(items []TranslationItem, newItem TranslationItem) []TranslationItem {
+// 	for idx, titem := range items {
+// 		if titem.Lang == newItem.Lang {
+// 			items[idx] = newItem
+// 			return items
+// 		}
+// 	}
+// 	return append(items, newItem)
+// }
