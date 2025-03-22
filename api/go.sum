@@ -13,6 +13,8 @@ github.com/mattn/go-colorable v0.1.13/go.mod h1:7S9/ev0klgBDR4GtXTXX8a3vIGJpMovk
 github.com/mattn/go-isatty v0.0.16/go.mod h1:kYGgaQfpe5nmfYZH+SKPsOc2e4SrIfOl2e/yFXSvRLM=
 github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
+github.com/pix303/actor-lib v0.0.0-20250215221620-1f85f93b6a0f h1:1PFAkfsUFRwx2znzPKPQOcYM1lUMOaOd/bWrpe++u6Q=
+github.com/pix303/actor-lib v0.0.0-20250215221620-1f85f93b6a0f/go.mod h1:Fy2STCkulEk1l/sfD7Ch0zMlUTYGVA2yO4S6KRmfuFc=
 github.com/pix303/eventstore-go-v2 v0.0.0-20250124211244-3666176d65bb h1:CSeF4jJSiTMxKxgHKCMyhqSl3mzxJAdcNo2WrNfpCTU=
 github.com/pix303/eventstore-go-v2 v0.0.0-20250124211244-3666176d65bb/go.mod h1:ctamXM1jxslhSHLfXrjZzWi69laSfyauoPsykGg9HNI=
 github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=
