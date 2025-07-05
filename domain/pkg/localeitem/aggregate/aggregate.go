@@ -107,13 +107,3 @@ func (item *LocaleItemAggregate) update(evt events.StoreEvent) {
 		item.Translations = append(item.Translations, nt)
 	}
 }
-
-// func updateOrInsert(items []TranslationItem, newItem TranslationItem) []TranslationItem {
-// 	for idx, titem := range items {
-// 		if titem.Lang == newItem.Lang {
-// 			items[idx] = newItem
-// 			return items
-// 		}
-// 	}
-// 	return append(items, newItem)
-// }

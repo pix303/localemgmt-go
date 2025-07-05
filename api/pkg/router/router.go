@@ -2,8 +2,11 @@ package router
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"sync"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -38,35 +41,90 @@ func NewRouter() (*LocaleItemRouter, error) {
 	return &router, nil
 }
 
-type StartRouter int
-type StopRouter int
+type StartRouter struct{}
 type LocaleItemRouterState struct {
 	RouterInstance *LocaleItemRouter
+	server         *http.Server
+	isRunning      bool
+	mutex          sync.Mutex
 }
 
-func NewLocaleItemRouterState() *LocaleItemRouterState {
+func NewLocaleItemRouterState() (*LocaleItemRouterState, error) {
 	r, err := NewRouter()
 	if err != nil {
-		slog.Error("fail to start router", slog.String("err", err.Error()))
-		return nil
+		return nil, err
 	}
 	initState := LocaleItemRouterState{
 		RouterInstance: r,
+		mutex:          sync.Mutex{},
 	}
-	return &initState
+	return &initState, nil
 }
+
+const Port = 8083
 
 func (this *LocaleItemRouterState) Process(inbox chan actor.Message) {
 	for {
 		msg := <-inbox
 		switch msg.Body.(type) {
 		case StartRouter:
-			slog.Error("Error: %s", "error", http.ListenAndServe(":8080", this.RouterInstance.Router).Error())
-		case StopRouter:
-			err := this.RouterInstance.Router.Shutdown(context.Background())
-			if err != nil {
-				slog.Error("fail to stop router", slog.String("err", err.Error()))
+			if !this.isRunning {
+				this.mutex.Lock()
+				slog.Info("Starting server", slog.Int("port", Port))
+
+				this.server = &http.Server{
+					Addr:    fmt.Sprintf("localhost:%d", Port),
+					Handler: this.RouterInstance.Router,
+				}
+
+				go func() {
+					err := this.server.ListenAndServe()
+					if err != nil && err != http.ErrServerClosed {
+						slog.Error("http server fail:", slog.String("err", err.Error()))
+					}
+				}()
+
+				this.server.RegisterOnShutdown(func() {
+					slog.Info("Server shutdown completely")
+				})
+
+				this.isRunning = true
+				this.mutex.Unlock()
+			} else {
+				slog.Info("Server is already running, start message ignored")
 			}
+
+		default:
+			slog.Warn("Unable to process unknown message", slog.String("msg", msg.String()))
 		}
 	}
+}
+
+func (this *LocaleItemRouterState) Shutdown() {
+	if this.isRunning {
+		this.mutex.Lock()
+
+		slog.Info("Stopping server on port 8080")
+		ctx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(5*time.Second))
+		defer cancelFunc()
+
+		err := this.server.Shutdown(ctx)
+		if err != nil {
+			//it's not a real error but a info
+			if err == http.ErrServerClosed {
+				slog.Info("http server stopped on port 8080 with success", slog.String("err", err.Error()))
+			} else {
+				slog.Error("fail on stopping http server", slog.String("err", err.Error()))
+			}
+			return
+		}
+
+		this.mutex.Unlock()
+	} else {
+		slog.Info("Server is already stopped on port 8080")
+	}
+}
+
+func (this *LocaleItemRouterState) ProcessSync(msg actor.Message) (actor.Message, error) {
+	return actor.Message{}, nil
 }
