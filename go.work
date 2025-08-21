@@ -1,4 +1,4 @@
-go 1.24.0
+go 1.24.5
 
 use ./actor-lib
 
@@ -9,3 +9,5 @@ use ./api
 use ./domain
 
 use ./eventstore-go-v2
+
+use ./postgres-util-go
