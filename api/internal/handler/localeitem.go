@@ -1,8 +1,9 @@
 package handler
 
 import (
-	"fmt"
+	"context"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pix303/actor-lib/pkg/actor"
@@ -12,6 +13,7 @@ import (
 )
 
 var (
+	ErrorTimeout                  = echo.NewHTTPError(http.StatusRequestTimeout, "Error timout")
 	ErrorVerifyRequest            = echo.NewHTTPError(http.StatusBadRequest, "Error on verifying request parameters")
 	ErrorVerifyAggregateExistence = echo.NewHTTPError(http.StatusBadRequest, "Error on verifying existence of aggregateID")
 	ErrorEventStore               = echo.NewHTTPError(http.StatusInternalServerError, "Error eventstore")
@@ -19,15 +21,15 @@ var (
 	ErrorStoreUpdateEvent         = echo.NewHTTPError(http.StatusInternalServerError, "Error on store updating locale item event")
 )
 
-func wrapError(err *echo.HTTPError, message string) *echo.HTTPError {
-	return &echo.HTTPError{
-		Code:    err.Code,
-		Message: fmt.Sprintf("%s: %s", err.Message, message),
-	}
-}
+// func wrapError(err *echo.HTTPError, message string) *echo.HTTPError {
+// 	return &echo.HTTPError{
+// 		Code:    err.Code,
+// 		Message: fmt.Sprintf("%s: %s", err.Message, message),
+// 	}
+// }
 
 type LocaleItemHandler struct {
-	eventStoreActor actor.Actor
+	EventStoreActor actor.Actor
 }
 
 var LocaleItemHandlerAddress = actor.NewAddress("locale", "localeitem-handler")
@@ -47,7 +49,7 @@ func NewLocaleItemHandler() (LocaleItemHandler, error) {
 }
 
 // CreateLocaleItem add crate locale item event
-func (h *LocaleItemHandler) CreateLocaleItem(c echo.Context) error {
+func (reqHandler *LocaleItemHandler) CreateLocaleItem(c echo.Context) error {
 	payload := dto.CreateRequest{}
 	err := c.Bind(&payload)
 	if err != nil {
@@ -65,28 +67,36 @@ func (h *LocaleItemHandler) CreateLocaleItem(c echo.Context) error {
 		return err
 	}
 
-	msg := actor.Message{
-		To:   store.EventStoreAddress(),
-		From: nil,
-		Body: store.AddEventBody{Event: evt},
-	}
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancelFunc()
+	returnChan := make(chan actor.Message)
+	msg := actor.NewMessage(
+		store.EventStoreAddress,
+		LocaleItemHandlerAddress,
+		store.AddEventBody{Event: evt},
+		returnChan,
+	)
 
-	returnMsg, err := actor.DispatchMessageWithReturn(msg)
-	if err != nil {
-		return ErrorEventStore
-	}
+	reqHandler.EventStoreActor.Send(msg)
 
-	if body, ok := returnMsg.Body.(store.ResultAddEventBody); ok {
-		if body.Success {
-			return c.JSON(http.StatusOK, evt)
+	select {
+	case returnMsg := <-returnChan:
+		if body, ok := returnMsg.Body.(store.AddEventBodyResult); ok {
+			if body.Success {
+				return c.JSON(http.StatusOK, evt)
+			} else {
+				return ErrorStoreCreateEvent
+			}
 		}
+	case <-ctx.Done():
+		return ErrorEventStore
 	}
 
 	return ErrorStoreCreateEvent
 }
 
 // UpdateTranslation add add or update locale item translation event
-func (h *LocaleItemHandler) UpdateTranslation(c echo.Context) error {
+func (reqHandler *LocaleItemHandler) UpdateTranslation(c echo.Context) error {
 	payload := dto.UpdateRequest{}
 	err := c.Bind(&payload)
 	if err != nil {
@@ -98,21 +108,26 @@ func (h *LocaleItemHandler) UpdateTranslation(c echo.Context) error {
 		return ErrorVerifyRequest
 	}
 
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancelFunc()
+	returnChan := make(chan actor.Message)
 	msg := actor.NewMessage(
-		store.EventStoreAddress(),
+		store.EventStoreAddress,
 		LocaleItemHandlerAddress,
 		store.CheckExistenceByAggregateIDBody{Id: payload.AggregateId},
+		returnChan,
 	)
 
-	result, err := actor.DispatchMessageWithReturn(msg)
-	if err != nil {
-		return wrapError(ErrorEventStore, err.Error())
-	}
-
-	if body, ok := result.Body.(store.CheckExistenceByAggregateIDBodyResult); ok {
-		if !body.Exists {
-			return ErrorVerifyAggregateExistence
+	reqHandler.EventStoreActor.Send(msg)
+	select {
+	case returnMsg := <-returnChan:
+		if body, ok := returnMsg.Body.(store.CheckExistenceByAggregateIDBodyResult); ok {
+			if !body.Exists {
+				return ErrorVerifyAggregateExistence
+			}
 		}
+	case <-ctx.Done():
+		return ErrorTimeout
 	}
 
 	// add update event
@@ -124,11 +139,16 @@ func (h *LocaleItemHandler) UpdateTranslation(c echo.Context) error {
 	msg.Body = store.AddEventBody{
 		Event: evt,
 	}
+	reqHandler.EventStoreActor.Send(msg)
 
-	result, err = actor.DispatchMessageWithReturn(msg)
-	if err != nil {
-		return wrapError(ErrorStoreUpdateEvent, err.Error())
+	returnMsg := <-returnChan
+	if body, ok := returnMsg.Body.(store.AddEventBodyResult); ok {
+		if body.Success {
+			return c.JSON(http.StatusOK, evt)
+		} else {
+			return ErrorStoreUpdateEvent
+		}
 	}
 
-	return c.JSON(http.StatusOK, evt)
+	return ErrorStoreUpdateEvent
 }

@@ -63,7 +63,7 @@ func NewLocaleItemRouterState() (*LocaleItemRouterState, error) {
 
 const Port = 8083
 
-func (this *LocaleItemRouterState) Process(inbox chan actor.Message) {
+func (this *LocaleItemRouterState) Process(inbox <-chan actor.Message) {
 	for {
 		msg := <-inbox
 		switch msg.Body.(type) {
@@ -123,8 +123,4 @@ func (this *LocaleItemRouterState) Shutdown() {
 	} else {
 		slog.Info("Server is already stopped on port 8080")
 	}
-}
-
-func (this *LocaleItemRouterState) ProcessSync(msg actor.Message) (actor.Message, error) {
-	return actor.Message{}, nil
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/pix303/actor-lib/pkg/actor"
 	"github.com/pix303/localemgmt-go/api/pkg/router"
+	"github.com/pix303/localemgmt-go/domain/pkg/localeitem/aggregate"
 )
 
 func main() {
@@ -14,7 +15,6 @@ func main() {
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &opts))
 	slog.SetDefault(logger)
-	slog.Debug("logger setted")
 
 	routerState, err := router.NewLocaleItemRouterState()
 	if err != nil {
@@ -33,13 +33,20 @@ func main() {
 
 	actor.RegisterActor(&routerActor)
 
+	aggregateActor, err := aggregate.NewLocaleItemAggregateActor()
+	if err != nil {
+		slog.Error("error on startup aggregate actor", slog.String("err", err.Error()))
+		return
+	}
+	actor.RegisterActor(aggregateActor)
+
 	startEvent := router.StartRouter{}
 	msg := actor.Message{
 		From: actor.NewAddress("local", "main"),
 		To:   actor.NewAddress("local", "router"),
 		Body: startEvent,
 	}
-	actor.DispatchMessage(msg)
+	actor.SendMessage(msg)
 
 	ctx := actor.GetPostman().GetContext()
 	<-ctx.Done()
