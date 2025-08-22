@@ -48,7 +48,7 @@ func NewLocaleItemAggregate() LocaleItemAggregate {
 		"no-code",
 		"no-context",
 		// todo: how to better init an array?
-		make([]TranslationItem, 5),
+		make([]TranslationItem, 0),
 	}
 }
 
@@ -93,7 +93,6 @@ func (item *LocaleItemAggregate) update(evt events.StoreEvent) {
 	for i := 0; i < len(item.Translations); i++ {
 		t := &item.Translations[i]
 		if t.Lang == updatePayloadEvent.Lang {
-			slog.Info("on lang", slog.String("l", t.Lang))
 			t.Content = updatePayloadEvent.Content
 			t.UpdatedAt = time.Now()
 			t.UpdatedBy = evt.CreatedBy
@@ -104,6 +103,7 @@ func (item *LocaleItemAggregate) update(evt events.StoreEvent) {
 
 	if !foundLang {
 		nt := NewTranslationItem(updatePayloadEvent.Lang, updatePayloadEvent.Content, "todo")
+		slog.Info("new translation item", slog.Any("translation", nt))
 		item.Translations = append(item.Translations, nt)
 	}
 }
