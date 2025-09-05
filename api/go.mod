@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/labstack/echo/v4 v4.13.3
 	github.com/pix303/cinecity v0.0.1
-	github.com/pix303/eventstore-go-v2 v0.0.1
+	github.com/pix303/eventstore-go-v2 v0.0.2
 )
 
 require (
