@@ -1,14 +1,11 @@
 # todo
 
 ## eventstore repo with db 
-    - postgresql
     - nosql
 
 ## api
 
 - `localeitem/`
-    - ok -  create
-    - ok -  update 
     - get detail
     - search by context + lang + content
 
@@ -18,7 +15,5 @@
 
 ## projections
 
-- channel
-- localeitem detail
-- translation list
-
+- get detail
+- list

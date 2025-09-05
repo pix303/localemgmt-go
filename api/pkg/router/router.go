@@ -10,7 +10,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/pix303/actor-lib/pkg/actor"
+	"github.com/pix303/cinecity/pkg/actor"
 	"github.com/pix303/localemgmt-go/api/internal/handler"
 )
 

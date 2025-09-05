@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/pix303/actor-lib/pkg/actor"
+	"github.com/pix303/cinecity/pkg/actor"
 	"github.com/pix303/localemgmt-go/api/pkg/router"
 	"github.com/pix303/localemgmt-go/domain/pkg/localeitem/aggregate"
 )

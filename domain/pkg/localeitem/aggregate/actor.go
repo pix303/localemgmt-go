@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/pix303/actor-lib/pkg/actor"
-	"github.com/pix303/actor-lib/pkg/batch"
+	"github.com/pix303/cinecity/pkg/actor"
+	"github.com/pix303/cinecity/pkg/batch"
 
 	"github.com/pix303/eventstore-go-v2/pkg/store"
 	"github.com/pix303/postgres-util-go/pkg/postgres"

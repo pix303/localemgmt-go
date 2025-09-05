@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/pix303/actor-lib/pkg/actor"
+	"github.com/pix303/cinecity/pkg/actor"
 	"github.com/pix303/eventstore-go-v2/pkg/store"
 	"github.com/pix303/localemgmt-go/api/internal/dto"
 	"github.com/pix303/localemgmt-go/domain/pkg/localeitem/events"

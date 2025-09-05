@@ -1,6 +1,6 @@
 go 1.24.5
 
-use ./actor-lib
+use ./cinecity
 
 use ./actor-facade
 
