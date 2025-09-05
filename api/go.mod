@@ -1,13 +1,11 @@
 module github.com/pix303/localemgmt-go/api
 
-go 1.23.5
-
-toolchain go1.24.0
+go 1.24.0
 
 require (
 	github.com/labstack/echo/v4 v4.13.3
-	github.com/pix303/actor-lib v0.0.0-20250215221620-1f85f93b6a0f
-	github.com/pix303/eventstore-go-v2 v0.0.0-20250124211244-3666176d65bb
+	github.com/pix303/cinecity v0.0.1
+	github.com/pix303/eventstore-go-v2 v0.0.1
 )
 
 require (
