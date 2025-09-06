@@ -1,6 +1,9 @@
 [submodule "eventstore-go-v2"]
     path = eventstore-go-v2
     url = git@github.com:pix303/eventstore-go-v2.git
-[submodule "actor-lib"]
-	path = actor-lib
-	url = git@github.com:pix303/actor-lib.git
+[submodule "cinecity"]
+	path = cinecity
+	url = https://github.com/pix303/cinecity
+[submodule "postgres-util-go"]
+	path = postgres-util-go
+	url = https://github.com/pix303/postgres-util-go
