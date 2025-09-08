@@ -133,9 +133,13 @@ func NewLocaleItemAggregateActor() (*actor.Actor, error) {
 		&s,
 	)
 
+	if err != nil {
+		return nil, err
+	}
+
 	// subscribe event store notifies
 	addSubMsg := actor.NewAddSubcriptionMessage(a.GetAddress(), store.EventStoreAddress)
-	a.Send(addSubMsg)
+	err = a.Send(addSubMsg)
 
 	if err != nil {
 		return nil, err

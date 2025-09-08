@@ -13,12 +13,12 @@ import (
 )
 
 var (
-	ErrorTimeout                  = echo.NewHTTPError(http.StatusRequestTimeout, "Error timout")
-	ErrorVerifyRequest            = echo.NewHTTPError(http.StatusBadRequest, "Error on verifying request parameters")
-	ErrorVerifyAggregateExistence = echo.NewHTTPError(http.StatusBadRequest, "Error on verifying existence of aggregateID")
-	ErrorEventStore               = echo.NewHTTPError(http.StatusInternalServerError, "Error eventstore")
-	ErrorStoreCreateEvent         = echo.NewHTTPError(http.StatusInternalServerError, "Error on store creating locale item event")
-	ErrorStoreUpdateEvent         = echo.NewHTTPError(http.StatusInternalServerError, "Error on store updating locale item event")
+	ErrTimeout                  = echo.NewHTTPError(http.StatusRequestTimeout, "Error timout")
+	ErrVerifyRequest            = echo.NewHTTPError(http.StatusBadRequest, "Error on verifying request parameters")
+	ErrVerifyAggregateExistence = echo.NewHTTPError(http.StatusBadRequest, "Error on verifying existence of aggregateID")
+	ErrEventStore               = echo.NewHTTPError(http.StatusInternalServerError, "Error eventstore")
+	ErrStoreCreateEvent         = echo.NewHTTPError(http.StatusInternalServerError, "Error on store creating locale item event")
+	ErrStoreUpdateEvent         = echo.NewHTTPError(http.StatusInternalServerError, "Error on store updating locale item event")
 )
 
 // func wrapError(err *echo.HTTPError, message string) *echo.HTTPError {
@@ -58,7 +58,7 @@ func (reqHandler *LocaleItemHandler) CreateLocaleItem(c echo.Context) error {
 
 	// verify request
 	if payload.Content == "" || payload.Context == "" || payload.Lang == "" {
-		return ErrorVerifyRequest
+		return ErrVerifyRequest
 	}
 
 	evt, err := events.NewCreateEvent(payload.Content, payload.Context, payload.Lang, "todo")
@@ -77,7 +77,10 @@ func (reqHandler *LocaleItemHandler) CreateLocaleItem(c echo.Context) error {
 		returnChan,
 	)
 
-	reqHandler.EventStoreActor.Send(msg)
+	err = reqHandler.EventStoreActor.Send(msg)
+	if err != nil {
+		return ErrStoreCreateEvent
+	}
 
 	select {
 	case returnMsg := <-returnChan:
@@ -85,14 +88,14 @@ func (reqHandler *LocaleItemHandler) CreateLocaleItem(c echo.Context) error {
 			if body.Success {
 				return c.JSON(http.StatusOK, evt)
 			} else {
-				return ErrorStoreCreateEvent
+				return ErrStoreCreateEvent
 			}
 		}
 	case <-ctx.Done():
-		return ErrorEventStore
+		return ErrEventStore
 	}
 
-	return ErrorStoreCreateEvent
+	return ErrStoreCreateEvent
 }
 
 // UpdateTranslation add add or update locale item translation event
@@ -105,7 +108,7 @@ func (reqHandler *LocaleItemHandler) UpdateTranslation(c echo.Context) error {
 
 	// verify request
 	if payload.AggregateId == "" || payload.Content == "" || payload.Lang == "" {
-		return ErrorVerifyRequest
+		return ErrVerifyRequest
 	}
 
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 60*time.Second)
@@ -118,16 +121,20 @@ func (reqHandler *LocaleItemHandler) UpdateTranslation(c echo.Context) error {
 		returnChan,
 	)
 
-	reqHandler.EventStoreActor.Send(msg)
+	err = reqHandler.EventStoreActor.Send(msg)
+	if err != nil {
+		return ErrVerifyAggregateExistence
+	}
+
 	select {
 	case returnMsg := <-returnChan:
 		if body, ok := returnMsg.Body.(store.CheckExistenceByAggregateIDBodyResult); ok {
 			if !body.Exists {
-				return ErrorVerifyAggregateExistence
+				return ErrVerifyAggregateExistence
 			}
 		}
 	case <-ctx.Done():
-		return ErrorTimeout
+		return ErrTimeout
 	}
 
 	// add update event
@@ -139,16 +146,20 @@ func (reqHandler *LocaleItemHandler) UpdateTranslation(c echo.Context) error {
 	msg.Body = store.AddEventBody{
 		Event: evt,
 	}
-	reqHandler.EventStoreActor.Send(msg)
+
+	err = reqHandler.EventStoreActor.Send(msg)
+	if err != nil {
+		return ErrStoreUpdateEvent
+	}
 
 	returnMsg := <-returnChan
 	if body, ok := returnMsg.Body.(store.AddEventBodyResult); ok {
 		if body.Success {
 			return c.JSON(http.StatusOK, evt)
 		} else {
-			return ErrorStoreUpdateEvent
+			return ErrStoreUpdateEvent
 		}
 	}
 
-	return ErrorStoreUpdateEvent
+	return ErrStoreUpdateEvent
 }
