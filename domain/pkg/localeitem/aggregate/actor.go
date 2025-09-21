@@ -1,18 +1,11 @@
 package aggregate
 
 import (
-	"encoding/json"
-	"fmt"
-	"log/slog"
-	"os"
-	"time"
-
-	"github.com/jmoiron/sqlx"
 	"github.com/pix303/cinecity/pkg/actor"
 	"github.com/pix303/cinecity/pkg/batch"
+	"log/slog"
 
 	"github.com/pix303/eventstore-go-v2/pkg/store"
-	"github.com/pix303/postgres-util-go/pkg/postgres"
 )
 
 var (
@@ -20,102 +13,17 @@ var (
 	ErrToPersistAggregate       = "error on persisting aggregate"
 )
 
-type LocaleItemAggregatePersister interface {
-	Persist(aggregate LocaleItemAggregate) error
-}
-
-type LocaleItemAggregateLocalPersisterOnFile struct{}
-
-const LocaleItemAggregateLocalFolder = "./localeitems-bucket"
-
-func (persister *LocaleItemAggregateLocalPersisterOnFile) Persist(aggregate LocaleItemAggregate) error {
-	slog.Info("start persisting aggregate", slog.String("aggregateId", aggregate.AggregateID))
-	aggregateDir, err := os.Open(LocaleItemAggregateLocalFolder)
-	if err != nil {
-		err = os.Mkdir(LocaleItemAggregateLocalFolder, 0755)
-		if err != nil {
-			return fmt.Errorf("error on create local folder for aggregates: %s", err.Error())
-		}
-		aggregateDir, _ = os.Open(LocaleItemAggregateLocalFolder)
-	}
-
-	// resjson, err := json.MarshalIndent(aggregate, "", "  ")
-	resjson, err := json.Marshal(aggregate)
-	if err != nil {
-		slog.Warn("fail to marshal aggregate", slog.String("error", err.Error()))
-		return err
-	}
-
-	err = os.WriteFile(fmt.Sprintf("%s/%s.json", aggregateDir.Name(), aggregate.AggregateID), resjson, 0755)
-	if err != nil {
-		slog.Warn("fail to write aggregate file", slog.String("error", err.Error()))
-		return err
-	}
-	return nil
-}
-
-type LocaleItemAggregatePersisterOnDB struct {
-	repository *sqlx.DB
-}
-
-func NewLocaleItemAggregatePersisterOnDB() (*LocaleItemAggregatePersisterOnDB, error) {
-	db, err := postgres.NewPostgresqlRepository()
-	if err != nil {
-		return nil, err
-	}
-
-	return &LocaleItemAggregatePersisterOnDB{
-		repository: db,
-	}, nil
-}
-
-var insertOrUpdate string = `INSERT INTO locale.localeitems (aggregateId, updatedAt, data)
-VALUES (:id, :upDate, :data)
-ON CONFLICT (aggregateId) 
-DO UPDATE SET 
-    updatedAt = :upDate,
-    data = :data;
-`
-
-func (persiter *LocaleItemAggregatePersisterOnDB) Persist(aggregate LocaleItemAggregate) error {
-	datajson, err := json.Marshal(aggregate)
-	if err != nil {
-		slog.Warn("fail to marshal aggregate", slog.String("error", err.Error()))
-		return err
-	}
-
-	res, err := persiter.repository.NamedExec(insertOrUpdate, map[string]any{
-		"id":     aggregate.AggregateID,
-		"data":   string(datajson),
-		"upDate": time.Now(),
-	})
-
-	if err != nil {
-		slog.Warn("fail to persist aggregate", slog.String("error", err.Error()))
-		return err
-	}
-
-	numRows, err := res.RowsAffected()
-	if err != nil {
-		slog.Warn("fail to persist aggregate", slog.String("error", err.Error()))
-		return err
-	}
-
-	if numRows != 1 {
-		return fmt.Errorf("no row updated or interted for %s", aggregate.AggregateID)
-	}
-
-	return nil
-}
-
+// LocaleItemAggregateState is the actor state for the aggregate persistence
 type LocaleItemAggregateState struct {
 	store     *store.EventStore
 	batcher   *batch.Batcher
-	persister LocaleItemAggregatePersister
+	aggregate *LocaleItemAggregate
 }
 
+var LocaleItemAggregateAddress = actor.NewAddress("local", "aggregate")
+
 func NewLocaleItemAggregateActor() (*actor.Actor, error) {
-	// TODO: use store actor??
+
 	// create event store reference
 	es, err := store.NewEventStore([]store.EventStoreConfigurator{store.WithPostgresqlRepository})
 
@@ -124,8 +32,10 @@ func NewLocaleItemAggregateActor() (*actor.Actor, error) {
 	}
 
 	// create actor state
+	aggregate := NewLocaleItemAggregate()
 	s := LocaleItemAggregateState{
-		store: &es,
+		store:     &es,
+		aggregate: &aggregate,
 	}
 
 	a, err := actor.NewActor(
@@ -148,20 +58,40 @@ func NewLocaleItemAggregateActor() (*actor.Actor, error) {
 	b := batch.NewBatcher(5000, 5, s.updateAggregateState)
 	s.batcher = b
 
-	persister, err := NewLocaleItemAggregatePersisterOnDB()
+	detailPersistState, err := NewLocaleItemAggregateDetailState()
+	if err != nil {
+		return nil, err
+	}
+	detailPersisterActor, err := actor.NewActor(
+		LocaleItemAggregateDetailAddress,
+		detailPersistState,
+	)
+	if err != nil {
+		return nil, err
+	}
+	err = actor.RegisterActor(&detailPersisterActor)
 	if err != nil {
 		return nil, err
 	}
 
-	s.persister = persister
+	listPersistState, err := NewLocaleItemAggregateListState()
+	if err != nil {
+		return nil, err
+	}
+	listPersistActor, err := actor.NewActor(
+		LocaleItemAggregateListAddress,
+		listPersistState,
+	)
+	if err != nil {
+		return nil, err
+	}
+	err = actor.RegisterActor(&listPersistActor)
+	if err != nil {
+		return nil, err
+	}
+
 	return &a, nil
 }
-
-// type LocaleItemAggregateDetailEventBody struct {
-// 	AggregateID string
-// 	EventType   string
-// 	Payload     string
-// }
 
 func (state *LocaleItemAggregateState) Process(inbox <-chan actor.Message) {
 	for {
@@ -176,9 +106,10 @@ func (state *LocaleItemAggregateState) Process(inbox <-chan actor.Message) {
 func (state *LocaleItemAggregateState) updateAggregateState(msg actor.Message) {
 	body, ok := msg.Body.(store.StoreEventAddedBody)
 	if !ok {
-		slog.Warn("cant manage different message with LocaleItemAggregateDetailEventBody body: ignored")
+		slog.Warn("can not manage different message with LocaleItemAggregateDetailEventBody body: ignored")
 		return
 	}
+
 	// TODO: use actor??
 	evts, _, err := state.store.Repository.RetriveByAggregateID(body.AggregateID)
 	if err != nil {
@@ -186,17 +117,35 @@ func (state *LocaleItemAggregateState) updateAggregateState(msg actor.Message) {
 		return
 	}
 
-	aggregate := NewLocaleItemAggregate()
-	aggregate.Reduce(evts)
+	state.aggregate.Reduce(evts)
 
-	err = state.persister.Persist(aggregate)
+	detailMsg := actor.NewMessage(
+		LocaleItemAggregateDetailAddress,
+		LocaleItemAggregateAddress,
+		LocaleItemAggregateDetailBody{*state.aggregate},
+		nil,
+	)
+
+	listMsg := actor.NewMessage(
+		LocaleItemAggregateListAddress,
+		LocaleItemAggregateAddress,
+		LocaleItemAggregateListBody{*state.aggregate},
+		nil,
+	)
+
+	err = actor.SendMessage(detailMsg)
 	if err != nil {
-		slog.Warn(ErrToPersistAggregate, slog.String("error", err.Error()))
+		slog.Error(ErrToPersistAggregate, slog.String("error", err.Error()))
+	}
+
+	err = actor.SendMessage(listMsg)
+	if err != nil {
+		slog.Error(ErrToPersistAggregate, slog.String("error", err.Error()))
 	}
 }
 
 func (state *LocaleItemAggregateState) Shutdown() {
 	state.store = nil
 	state.batcher = nil
-	state.persister = nil
+	state.aggregate = nil
 }

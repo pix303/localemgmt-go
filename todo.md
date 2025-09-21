@@ -1,19 +1,29 @@
 # todo
 
+
 ## eventstore repo with db 
-    - nosql
+    - L - nosql
+
+## cinecity
+    - M - remote with rabbitq
+    - M - dev.to
 
 ## api
 
-- `localeitem/`
-    - get detail
-    - search by context + lang + content
+    - `localeitem/`
+        - H - get detail
+        - M - search by context + lang + content
 
-- `user/`
-    - update contexts 
-    - get detail
+    - `user/`
+        - L - update contexts 
+        - L - get detail
+
 
 ## projections
 
-- get detail
-- list
+    - H - list
+
+
+## auth
+    - M - FE
+    - H - API

@@ -31,14 +31,23 @@ func main() {
 		return
 	}
 
-	actor.RegisterActor(&routerActor)
+	err = actor.RegisterActor(&routerActor)
+	if err != nil {
+		slog.Error("error on startup router actor", slog.String("err", err.Error()))
+		return
+	}
 
 	aggregateActor, err := aggregate.NewLocaleItemAggregateActor()
 	if err != nil {
 		slog.Error("error on startup aggregate actor", slog.String("err", err.Error()))
 		return
 	}
-	actor.RegisterActor(aggregateActor)
+
+	err = actor.RegisterActor(aggregateActor)
+	if err != nil {
+		slog.Error("error on startup router actor", slog.String("err", err.Error()))
+		return
+	}
 
 	startEvent := router.StartRouter{}
 	msg := actor.Message{
@@ -46,7 +55,11 @@ func main() {
 		To:   actor.NewAddress("local", "router"),
 		Body: startEvent,
 	}
-	actor.SendMessage(msg)
+	err = actor.SendMessage(msg)
+	if err != nil {
+		slog.Error("error on startup router", slog.String("err", err.Error()))
+		return
+	}
 
 	ctx := actor.GetPostman().GetContext()
 	<-ctx.Done()
