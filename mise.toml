@@ -4,5 +4,5 @@ _.file = '.env.json'
 [tasks.dev]
 run = [
        'clear',
-       'go run actor-facade/main.go'
+       'go run actor-facade/main.go | fx'
 ]

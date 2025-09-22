@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -12,38 +13,6 @@ import (
 	"github.com/pix303/localemgmt-go/domain/pkg/localeitem/aggregate"
 	"github.com/pix303/localemgmt-go/domain/pkg/localeitem/events"
 )
-
-var (
-	ErrTimeout                  = echo.NewHTTPError(http.StatusRequestTimeout, "Error timout")
-	ErrVerifyRequest            = echo.NewHTTPError(http.StatusBadRequest, "Error on verifying request parameters: lang and content")
-	ErrVerifyAggregateExistence = echo.NewHTTPError(http.StatusBadRequest, "Error on verifying existence of aggregateID")
-	ErrEventStore               = echo.NewHTTPError(http.StatusInternalServerError, "Error eventstore")
-	ErrStoreCreateEvent         = echo.NewHTTPError(http.StatusInternalServerError, "Error on store creating locale item event")
-	ErrStoreUpdateEvent         = echo.NewHTTPError(http.StatusInternalServerError, "Error on store updating locale item event")
-)
-
-type LocaleItemHandler struct {
-	EventStoreActor actor.Actor
-}
-
-var LocaleItemHandlerAddress = actor.NewAddress("locale", "localeitem-handler")
-
-func NewLocaleItemHandler() (LocaleItemHandler, error) {
-
-	es, err := store.NewEvenStoreActorWithPostgres()
-	if err != nil {
-		return LocaleItemHandler{}, err
-	}
-
-	err = actor.RegisterActor(&es)
-	if err != nil {
-		return LocaleItemHandler{}, err
-	}
-
-	return LocaleItemHandler{
-		es,
-	}, nil
-}
 
 // CreateLocaleItem add crate locale item event
 func (reqHandler *LocaleItemHandler) CreateLocaleItem(c echo.Context) error {
@@ -132,6 +101,7 @@ func (reqHandler *LocaleItemHandler) UpdateTranslation(c echo.Context) error {
 	select {
 	case returnMsg := <-returnChan:
 		if body, ok := returnMsg.Body.(store.CheckExistenceByAggregateIDBodyResult); ok {
+			slog.Info("body", "body", body)
 			if !body.Exists {
 				return ErrVerifyAggregateExistence
 			}

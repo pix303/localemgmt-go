@@ -7,8 +7,8 @@ CREATE TABLE IF NOT EXISTS locale.localeitems_list (
   lang varchar(12) NOT NULL,
   content text NOT NULL,
   context varchar(64) NOT NULL,
-  is_lang_reference boolean DEFAULT true,
-  CONSTRAINT localeitems_list_pkey PRIMARY KEY (aggregate_id, lang, context)
+  is_lang_reference boolean DEFAULT false,
+  CONSTRAINT localeitems_list_pkey PRIMARY KEY (aggregate_id, lang)
 );
 
 -- +goose down

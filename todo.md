@@ -11,6 +11,7 @@
 ## api
 
     - `localeitem/`
+        - H - list items projection
         - H - get detail
         - M - search by context + lang + content
 
@@ -20,8 +21,6 @@
 
 
 ## projections
-
-    - H - list
 
 
 ## auth

@@ -43,13 +43,14 @@ func (state *LocaleItemAggregateListState) Process(inbox <-chan actor.Message) {
 	}
 }
 
-var listitemInsertOrUpdate string = `INSERT INTO locale.localeitems_list (aggregate_id, lang, content, context, updated_at, updated_by)
-VALUES (:id, :lang, :content, :context, :updatedAt, :updatedBy)
-ON CONFLICT (aggregate_id, lang, context)
+var listitemInsertOrUpdate string = `INSERT INTO locale.localeitems_list (aggregate_id, lang, content, context, updated_at, updated_by, is_lang_reference)
+VALUES (:id, :lang, :content, :context, :updatedAt, :updatedBy, :isLangReference)
+ON CONFLICT (aggregate_id, lang )
 DO UPDATE SET
     content = :content,
     updated_at = :updatedAt,
-    updated_by = :updatedBy;
+    updated_by = :updatedBy,
+    is_lang_reference = :isLangReference;
 `
 
 func (state *LocaleItemAggregateListState) persist(aggregate LocaleItemAggregate) error {
@@ -80,12 +81,13 @@ func (state *LocaleItemAggregateListState) persist(aggregate LocaleItemAggregate
 
 		_, err = tx.NamedExec(listitemInsertOrUpdate,
 			map[string]any{
-				"id":        aggregate.AggregateID,
-				"content":   tItem.Content,
-				"context":   aggregate.Context,
-				"lang":      tItem.Lang,
-				"updatedAt": tItem.UpdatedAt,
-				"updatedBy": user,
+				"id":              aggregate.AggregateID,
+				"content":         tItem.Content,
+				"context":         aggregate.Context,
+				"lang":            tItem.Lang,
+				"updatedAt":       tItem.UpdatedAt,
+				"updatedBy":       user,
+				"isLangReference": aggregate.ReferenceLang == tItem.Lang,
 			},
 		)
 
@@ -94,6 +96,7 @@ func (state *LocaleItemAggregateListState) persist(aggregate LocaleItemAggregate
 				slog.String("lang", tItem.Lang),
 				slog.String("content", tItem.Content),
 				slog.String("id", aggregate.AggregateID),
+				slog.String("err", err.Error()),
 			)
 		}
 	}
