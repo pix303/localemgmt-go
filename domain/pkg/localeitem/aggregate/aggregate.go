@@ -123,3 +123,33 @@ func (item *LocaleItemAggregate) update(evt events.StoreEvent) {
 		item.Translations = append(item.Translations, nt)
 	}
 }
+
+type LocaleItemList struct {
+	Id              string    `db:"aggregate_id"`
+	Content         string    `db:"content"`
+	Context         string    `db:"context"`
+	Lang            string    `db:"lang"`
+	UpdatedAt       time.Time `db:"updated_at"`
+	UpdatedBy       string    `db:"updated_by"`
+	IsLangReference bool      `db:"is_lang_reference"`
+}
+
+func NewLocaleItemList(
+	id string,
+	content string,
+	context string,
+	lang string,
+	updatedAt time.Time,
+	updatedBy string,
+	isLangReference bool,
+) LocaleItemList {
+	return LocaleItemList{
+		Id:              id,
+		Content:         content,
+		Context:         context,
+		Lang:            lang,
+		UpdatedAt:       updatedAt,
+		UpdatedBy:       updatedBy,
+		IsLangReference: isLangReference,
+	}
+}

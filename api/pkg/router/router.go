@@ -37,6 +37,7 @@ func NewRouter() (*LocaleItemRouter, error) {
 	localeItemGroup.POST("/create", localeHandler.CreateLocaleItem)
 	localeItemGroup.POST("/update", localeHandler.UpdateTranslation)
 	localeItemGroup.GET("/detail/:id", localeHandler.GetDetail)
+	localeItemGroup.GET("/context/:id", localeHandler.GetContext)
 
 	router := LocaleItemRouter{r}
 	return &router, nil

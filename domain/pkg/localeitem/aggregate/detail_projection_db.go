@@ -48,6 +48,14 @@ type GetLocaleItemAggregateDetailBodyResult struct {
 	Aggregate LocaleItemAggregate
 }
 
+type GetContextBody struct {
+	Id string
+}
+
+type GetContextBodyResult struct {
+	Items []LocaleItemList
+}
+
 func (state *LocaleItemAggregateDetailState) Process(msg actor.Message) {
 	switch payload := msg.Body.(type) {
 	case AddLocaleItemAggregateDetailBody:

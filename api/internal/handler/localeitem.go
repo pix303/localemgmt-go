@@ -60,6 +60,28 @@ func (handler *LocaleItemHandler) GetDetail(ctx echo.Context) error {
 	return nil
 }
 
+func (handler *LocaleItemHandler) GetContext(ctx echo.Context) error {
+	contextId := ctx.Param("id")
+	msg := actor.NewMessage(
+		aggregate.LocaleItemAggregateListAddress,
+		nil,
+		aggregate.GetContextBody{
+			Id: contextId,
+		},
+		true,
+	)
+	resultMsg, err := actor.SendMessageWithResponse(msg)
+	if err != nil {
+		return err
+	}
+
+	err = ctx.JSON(http.StatusOK, resultMsg.Body)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // CreateLocaleItem add crate locale item event
 func (handler *LocaleItemHandler) CreateLocaleItem(c echo.Context) error {
 	payload := dto.CreateRequest{}

@@ -33,24 +33,33 @@ type AddLocaleItemAggregateListBody struct {
 func (state *LocaleItemAggregateListState) Process(msg actor.Message) {
 	switch payload := msg.Body.(type) {
 	case AddLocaleItemAggregateListBody:
-		err := state.persist(payload.Aggregate)
+		err := state.persistList(payload.Aggregate)
 		if err != nil {
 			slog.Error("error on persist list", slog.String("err", err.Error()))
+		}
+	case GetContextBody:
+		result, err := state.getList(payload.Id)
+		if err != nil {
+			slog.Error("error on persist list", slog.String("err", err.Error()))
+		}
+		returnMsg := actor.NewReturnMessage(GetContextBodyResult{Items: result}, msg)
+		if msg.WithReturn {
+			msg.ReturnChan <- actor.NewWrappedMessage(&returnMsg, err)
 		}
 	}
 }
 
 var listitemInsertOrUpdate string = `INSERT INTO locale.localeitems_list (aggregate_id, lang, content, context, updated_at, updated_by, is_lang_reference)
-VALUES (:id, :lang, :content, :context, :updatedAt, :updatedBy, :isLangReference)
+VALUES (:id, :lang, :content, :context, :updated_at, :updated_by, :is_lang_heference)
 ON CONFLICT (aggregate_id, lang )
 DO UPDATE SET
     content = :content,
-    updated_at = :updatedAt,
-    updated_by = :updatedBy,
-    is_lang_reference = :isLangReference;
+    updated_at = :updated_at,
+    updated_by = :updated_by,
+    is_lang_reference = :is_lang_reference;
 `
 
-func (state *LocaleItemAggregateListState) persist(aggregate LocaleItemAggregate) error {
+func (state *LocaleItemAggregateListState) persistList(aggregate LocaleItemAggregate) error {
 
 	slog.Debug("start insert or update aggregate translations in list projection")
 	tx, err := state.repository.Beginx()
@@ -76,17 +85,16 @@ func (state *LocaleItemAggregateListState) persist(aggregate LocaleItemAggregate
 			}
 		}
 
-		_, err = tx.NamedExec(listitemInsertOrUpdate,
-			map[string]any{
-				"id":              aggregate.AggregateID,
-				"content":         tItem.Content,
-				"context":         aggregate.Context,
-				"lang":            tItem.Lang,
-				"updatedAt":       tItem.UpdatedAt,
-				"updatedBy":       user,
-				"isLangReference": aggregate.ReferenceLang == tItem.Lang,
-			},
+		params := NewLocaleItemList(
+			aggregate.AggregateID,
+			tItem.Lang,
+			tItem.Content,
+			aggregate.Context,
+			tItem.UpdatedAt,
+			user,
+			aggregate.ReferenceLang == tItem.Lang,
 		)
+		_, err = tx.NamedExec(listitemInsertOrUpdate, params)
 
 		if err != nil {
 			slog.Error("fail insert/update statement",
@@ -100,6 +108,15 @@ func (state *LocaleItemAggregateListState) persist(aggregate LocaleItemAggregate
 
 	slog.Debug("finish insert or update aggregate translations in list projection")
 	return tx.Commit()
+}
+
+func (state *LocaleItemAggregateListState) getList(context string) ([]LocaleItemList, error) {
+	result := make([]LocaleItemList, 0)
+	err := state.repository.Select(&result, "SELECT * FROM locale.localeitems_list WHERE context = $1", context)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func (state *LocaleItemAggregateListState) GetState() any {
