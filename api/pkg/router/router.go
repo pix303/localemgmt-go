@@ -28,14 +28,15 @@ func NewRouter() (*LocaleItemRouter, error) {
 	apiGroup := r.Group(apiVersion)
 	apiGroup.GET("/", handler.WelcomeWithMessageHandler)
 
-	localeHanderl, err := handler.NewLocaleItemHandler()
+	localeHandler, err := handler.NewLocaleItemHandler()
 	if err != nil {
 		return nil, err
 	}
 
 	localeItemGroup := apiGroup.Group("/localeitem")
-	localeItemGroup.POST("/create", localeHanderl.CreateLocaleItem)
-	localeItemGroup.POST("/update", localeHanderl.UpdateTranslation)
+	localeItemGroup.POST("/create", localeHandler.CreateLocaleItem)
+	localeItemGroup.POST("/update", localeHandler.UpdateTranslation)
+	localeItemGroup.GET("/detail/:id", localeHandler.GetDetail)
 
 	router := LocaleItemRouter{r}
 	return &router, nil
@@ -63,41 +64,42 @@ func NewLocaleItemRouterState() (*LocaleItemRouterState, error) {
 
 const Port = 8083
 
-func (this *LocaleItemRouterState) Process(inbox <-chan actor.Message) {
-	for {
-		msg := <-inbox
-		switch msg.Body.(type) {
-		case StartRouter:
-			if !this.isRunning {
-				this.mutex.Lock()
-				slog.Info("Starting server", slog.Int("port", Port))
+func (this *LocaleItemRouterState) Process(msg actor.Message) {
+	switch msg.Body.(type) {
+	case StartRouter:
+		if !this.isRunning {
+			this.mutex.Lock()
+			slog.Info("Starting server", slog.Int("port", Port))
 
-				this.server = &http.Server{
-					Addr:    fmt.Sprintf("localhost:%d", Port),
-					Handler: this.RouterInstance.Router,
-				}
-
-				go func() {
-					err := this.server.ListenAndServe()
-					if err != nil && err != http.ErrServerClosed {
-						slog.Error("http server fail:", slog.String("err", err.Error()))
-					}
-				}()
-
-				this.server.RegisterOnShutdown(func() {
-					slog.Info("Server shutdown completely")
-				})
-
-				this.isRunning = true
-				this.mutex.Unlock()
-			} else {
-				slog.Info("Server is already running, start message ignored")
+			this.server = &http.Server{
+				Addr:    fmt.Sprintf("localhost:%d", Port),
+				Handler: this.RouterInstance.Router,
 			}
 
-		default:
-			slog.Warn("Unable to process unknown message", slog.String("msg", msg.String()))
+			go func() {
+				err := this.server.ListenAndServe()
+				if err != nil && err != http.ErrServerClosed {
+					slog.Error("http server fail:", slog.String("err", err.Error()))
+				}
+			}()
+
+			this.server.RegisterOnShutdown(func() {
+				slog.Info("Server shutdown completely")
+			})
+
+			this.isRunning = true
+			this.mutex.Unlock()
+		} else {
+			slog.Info("Server is already running, start message ignored")
 		}
+
+	default:
+		slog.Warn("Unable to process unknown message", slog.String("msg", msg.String()))
 	}
+}
+
+func (this *LocaleItemRouterState) GetState() any {
+	return nil
 }
 
 func (this *LocaleItemRouterState) Shutdown() {
