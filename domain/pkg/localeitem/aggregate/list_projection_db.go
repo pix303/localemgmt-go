@@ -26,19 +26,16 @@ func NewLocaleItemAggregateListState() (*LocaleItemAggregateListState, error) {
 	}, nil
 }
 
-type LocaleItemAggregateListBody struct {
+type AddLocaleItemAggregateListBody struct {
 	Aggregate LocaleItemAggregate
 }
 
-func (state *LocaleItemAggregateListState) Process(inbox <-chan actor.Message) {
-	for {
-		msg := <-inbox
-		switch payload := msg.Body.(type) {
-		case LocaleItemAggregateListBody:
-			err := state.persist(payload.Aggregate)
-			if err != nil {
-				slog.Error("error on persist list", slog.String("err", err.Error()))
-			}
+func (state *LocaleItemAggregateListState) Process(msg actor.Message) {
+	switch payload := msg.Body.(type) {
+	case AddLocaleItemAggregateListBody:
+		err := state.persist(payload.Aggregate)
+		if err != nil {
+			slog.Error("error on persist list", slog.String("err", err.Error()))
 		}
 	}
 }
@@ -103,6 +100,10 @@ func (state *LocaleItemAggregateListState) persist(aggregate LocaleItemAggregate
 
 	slog.Debug("finish insert or update aggregate translations in list projection")
 	return tx.Commit()
+}
+
+func (state *LocaleItemAggregateListState) GetState() any {
+	return nil
 }
 
 func (state *LocaleItemAggregateListState) Shutdown() {

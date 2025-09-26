@@ -36,19 +36,40 @@ DO UPDATE SET
     data = :data;
 `
 
-type LocaleItemAggregateDetailBody struct {
+type AddLocaleItemAggregateDetailBody struct {
 	Aggregate LocaleItemAggregate
 }
 
-func (state *LocaleItemAggregateDetailState) Process(inbox <-chan actor.Message) {
-	for {
-		msg := <-inbox
-		switch payload := msg.Body.(type) {
-		case LocaleItemAggregateDetailBody:
-			err := state.persistDetail(payload.Aggregate)
-			if err != nil {
-				slog.Error("error on persist detail", slog.String("err", err.Error()))
-			}
+type GetLocaleItemAggregateDetailBody struct {
+	Id string
+}
+
+type GetLocaleItemAggregateDetailBodyResult struct {
+	Aggregate LocaleItemAggregate
+}
+
+func (state *LocaleItemAggregateDetailState) Process(msg actor.Message) {
+	switch payload := msg.Body.(type) {
+	case AddLocaleItemAggregateDetailBody:
+		err := state.persistDetail(payload.Aggregate)
+		if err != nil {
+			slog.Error("error on persist detail", slog.String("err", err.Error()))
+		}
+	case GetLocaleItemAggregateDetailBody:
+		result, err := state.getDetail(payload.Id)
+		if err != nil {
+			slog.Error("error on get detail", slog.String("err", err.Error()))
+		}
+
+		resultMsg := actor.NewMessage(
+			msg.From,
+			msg.To,
+			result,
+			false,
+		)
+
+		if msg.WithReturn {
+			msg.ReturnChan <- actor.NewWrappedMessage(&resultMsg, err)
 		}
 	}
 }
@@ -84,6 +105,39 @@ func (state *LocaleItemAggregateDetailState) persistDetail(aggregate LocaleItemA
 		return fmt.Errorf("no row updated or interted for %s", aggregate.AggregateID)
 	}
 
+	return nil
+}
+
+const selectDetailByID = `SELECT data FROM locale.localeitem_detail WHERE aggregateid = $1`
+
+func (state *LocaleItemAggregateDetailState) getDetail(id string) (LocaleItemAggregate, error) {
+	result := LocaleItemAggregate{}
+	row, err := state.repository.Query(selectDetailByID, id)
+	if err != nil {
+		return result, err
+	}
+	defer row.Close()
+
+	if row.Err() != nil {
+		return result, row.Err()
+	}
+
+	for row.Next() {
+		var data string
+		err = row.Scan(&data)
+		if err != nil {
+			return result, err
+		}
+		err = json.Unmarshal([]byte(data), &result)
+		if err != nil {
+			return result, err
+		}
+	}
+
+	return result, nil
+}
+
+func (state *LocaleItemAggregateDetailState) GetState() any {
 	return nil
 }
 

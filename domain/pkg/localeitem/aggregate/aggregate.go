@@ -58,8 +58,8 @@ func NewLocaleItemAggregate() LocaleItemAggregate {
 	}
 }
 
-func (a *LocaleItemAggregate) GetTranslationItemByLang(lang string) (*TranslationItem, error) {
-	for _, t := range a.Translations {
+func (item *LocaleItemAggregate) GetTranslationItemByLang(lang string) (*TranslationItem, error) {
+	for _, t := range item.Translations {
 		if t.Lang == lang {
 			return &t, nil
 		}
@@ -67,18 +67,18 @@ func (a *LocaleItemAggregate) GetTranslationItemByLang(lang string) (*Translatio
 	return nil, fmt.Errorf("lang %s do not exist", lang)
 }
 
-func (a *LocaleItemAggregate) Reduce(evts []events.StoreEvent) {
+func (item *LocaleItemAggregate) Reduce(evts []events.StoreEvent) {
 	for _, evt := range evts {
-		a.Apply(evt)
+		item.Apply(evt)
 	}
 }
 
-func (a *LocaleItemAggregate) Apply(evt events.StoreEvent) {
+func (item *LocaleItemAggregate) Apply(evt events.StoreEvent) {
 	switch evt.EventType {
 	case domain.CreateLocaleItemStoreEventType:
-		a.init(evt)
+		item.init(evt)
 	case domain.UpdateTranslationStoreEventType:
-		a.update(evt)
+		item.update(evt)
 	}
 }
 

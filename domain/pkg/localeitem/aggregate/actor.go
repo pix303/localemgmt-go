@@ -49,7 +49,7 @@ func NewLocaleItemAggregateActor() (*actor.Actor, error) {
 
 	// subscribe event store notifies
 	addSubMsg := actor.NewAddSubcriptionMessage(a.GetAddress(), store.EventStoreAddress)
-	err = a.Send(addSubMsg)
+	err = actor.SendMessage(addSubMsg)
 
 	if err != nil {
 		return nil, err
@@ -93,13 +93,10 @@ func NewLocaleItemAggregateActor() (*actor.Actor, error) {
 	return &a, nil
 }
 
-func (state *LocaleItemAggregateState) Process(inbox <-chan actor.Message) {
-	for {
-		msg := <-inbox
-		switch msg.Body.(type) {
-		case store.StoreEventAddedBody:
-			state.batcher.Add(msg)
-		}
+func (state *LocaleItemAggregateState) Process(msg actor.Message) {
+	switch msg.Body.(type) {
+	case store.StoreEventAddedBody:
+		state.batcher.Add(msg)
 	}
 }
 
@@ -117,20 +114,22 @@ func (state *LocaleItemAggregateState) updateAggregateState(msg actor.Message) {
 		return
 	}
 
+	newAgg := NewLocaleItemAggregate()
+	state.aggregate = &newAgg
 	state.aggregate.Reduce(evts)
 
 	detailMsg := actor.NewMessage(
 		LocaleItemAggregateDetailAddress,
 		LocaleItemAggregateAddress,
-		LocaleItemAggregateDetailBody{*state.aggregate},
-		nil,
+		AddLocaleItemAggregateDetailBody{*state.aggregate},
+		false,
 	)
 
 	listMsg := actor.NewMessage(
 		LocaleItemAggregateListAddress,
 		LocaleItemAggregateAddress,
-		LocaleItemAggregateListBody{*state.aggregate},
-		nil,
+		AddLocaleItemAggregateListBody{*state.aggregate},
+		false,
 	)
 
 	err = actor.SendMessage(detailMsg)
@@ -142,6 +141,10 @@ func (state *LocaleItemAggregateState) updateAggregateState(msg actor.Message) {
 	if err != nil {
 		slog.Error(ErrToPersistAggregate, slog.String("error", err.Error()))
 	}
+}
+
+func (state *LocaleItemAggregateState) GetState() any {
+	return state.aggregate
 }
 
 func (state *LocaleItemAggregateState) Shutdown() {
