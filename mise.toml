@@ -6,3 +6,9 @@ run = [
        'clear',
        'go run actor-facade/main.go | fx'
 ]
+
+[tasks.test]
+run = [
+       'clear',
+       'dlv debug actor-facade/main.go'
+]
