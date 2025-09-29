@@ -4,15 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/nats-io/nats.go"
 	"github.com/pix303/cinecity/pkg/actor"
 	"github.com/pix303/postgres-util-go/pkg/postgres"
 )
 
 type LocaleItemAggregateDetailState struct {
 	repository *sqlx.DB
+	publisher  *nats.Conn
 }
 
 var LocaleItemAggregateDetailAddress = actor.NewAddress("local", "detail-aggregate-persister")
@@ -23,8 +26,15 @@ func NewLocaleItemAggregateDetailState() (*LocaleItemAggregateDetailState, error
 		return nil, err
 	}
 
+	natsToken := os.Getenv("NATS_SECRET")
+	nc, err := nats.Connect(nats.DefaultURL, nats.Token(natsToken))
+	if err != nil {
+		return nil, err
+	}
+
 	return &LocaleItemAggregateDetailState{
 		repository: db,
+		publisher:  nc,
 	}, nil
 }
 
@@ -59,10 +69,7 @@ type GetContextBodyResult struct {
 func (state *LocaleItemAggregateDetailState) Process(msg actor.Message) {
 	switch payload := msg.Body.(type) {
 	case AddLocaleItemAggregateDetailBody:
-		err := state.persistDetail(payload.Aggregate)
-		if err != nil {
-			slog.Error("error on persist detail", slog.String("err", err.Error()))
-		}
+		state.addDetail(payload.Aggregate)
 	case GetLocaleItemAggregateDetailBody:
 		result, err := state.getDetail(payload.Id)
 		if err != nil {
@@ -79,6 +86,20 @@ func (state *LocaleItemAggregateDetailState) Process(msg actor.Message) {
 		if msg.WithReturn {
 			msg.ReturnChan <- actor.NewWrappedMessage(&resultMsg, err)
 		}
+	}
+}
+
+func (state *LocaleItemAggregateDetailState) addDetail(aggregate LocaleItemAggregate) {
+	slog.Info("----on persist detail")
+	err := state.persistDetail(aggregate)
+	if err != nil {
+		slog.Error("error on persist detail", slog.String("err", err.Error()))
+		return
+	}
+
+	err = state.publisher.Publish("locale.detail.updated", []byte(aggregate.AggregateID))
+	if err != nil {
+		slog.Error("error on publish detail updated", slog.String("err", err.Error()))
 	}
 }
 

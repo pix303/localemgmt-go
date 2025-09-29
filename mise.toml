@@ -12,3 +12,6 @@ run = [
        'clear',
        'dlv debug actor-facade/main.go'
 ]
+
+[tools]
+"go:github.com/nats-io/natscli/nats" = "latest"

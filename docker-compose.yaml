@@ -23,5 +23,21 @@ services:
     depends_on:
       - postgres
 
+  nats:
+    image: nats:latest
+    container_name: nats-server
+    ports:
+      - "4222:4222"
+      - "8080:8080" 
+      - "8222:8222"
+    environment:
+      - NATS_SECRET=${NATS_SECRET}
+    volumes:
+      - ./nats.conf:/nats.conf
+      - nats-data:/data
+    command: ["-c", "/nats.conf"]
+
+
 volumes:
   postgres_data:
+  nats-data:
