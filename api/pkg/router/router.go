@@ -33,11 +33,18 @@ func NewRouter() (*LocaleItemRouter, error) {
 		return nil, err
 	}
 
+	userHandler := handler.NewUserHandler()
+
 	localeItemGroup := apiGroup.Group("/localeitem")
 	localeItemGroup.POST("/create", localeHandler.CreateLocaleItem)
 	localeItemGroup.POST("/update", localeHandler.UpdateTranslation)
 	localeItemGroup.GET("/detail/:id", localeHandler.GetDetail)
 	localeItemGroup.GET("/context/:id", localeHandler.GetContext)
+
+	userGroup := apiGroup.Group("/user")
+	userGroup.GET("/login", userHandler.Login)
+	userGroup.GET("/auth-callback", userHandler.AuthCallback)
+	userGroup.GET("/info", userHandler.GetInfo)
 
 	router := LocaleItemRouter{r}
 	return &router, nil

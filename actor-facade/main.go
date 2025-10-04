@@ -7,6 +7,7 @@ import (
 	"github.com/pix303/cinecity/pkg/actor"
 	"github.com/pix303/localemgmt-go/api/pkg/router"
 	"github.com/pix303/localemgmt-go/domain/pkg/localeitem/aggregate"
+	"github.com/pix303/localemgmt-go/domain/pkg/user"
 )
 
 func main() {
@@ -47,6 +48,17 @@ func main() {
 	if err != nil {
 		slog.Error("error on startup router actor", slog.String("err", err.Error()))
 		return
+	}
+
+	userActor, err := user.NewUserActor()
+	if err != nil {
+		slog.Error("error on startup user actor", slog.String("err", err.Error()))
+		return
+	}
+
+	err = actor.RegisterActor(userActor)
+	if err != nil {
+		slog.Error("error on startup user actor", slog.String("err", err.Error()))
 	}
 
 	startEvent := router.StartRouter{}

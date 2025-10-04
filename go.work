@@ -10,4 +10,7 @@ use ./domain
 
 use ./eventstore-go-v2
 
-use ./postgres-util-go
+use (
+	./crypt-util-go
+	./postgres-util-go
+)

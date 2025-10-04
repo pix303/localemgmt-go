@@ -23,7 +23,6 @@ func (persister *LocaleItemAggregateLocalPersisterOnFile) Persist(aggregate Loca
 		aggregateDir, _ = os.Open(LocaleItemAggregateLocalFolder)
 	}
 
-	// resjson, err := json.MarshalIndent(aggregate, "", "  ")
 	resjson, err := json.Marshal(aggregate)
 	if err != nil {
 		slog.Warn("fail to marshal aggregate", slog.String("error", err.Error()))

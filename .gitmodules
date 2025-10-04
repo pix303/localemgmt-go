@@ -7,3 +7,6 @@
 [submodule "postgres-util-go"]
 	path = postgres-util-go
 	url = https://github.com/pix303/postgres-util-go
+[submodule "crypt-util-go"]
+	path = crypt-util-go
+	url = http://github.com/pix303/crypt-util-go

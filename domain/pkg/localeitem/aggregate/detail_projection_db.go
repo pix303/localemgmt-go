@@ -90,7 +90,6 @@ func (state *LocaleItemAggregateDetailState) Process(msg actor.Message) {
 }
 
 func (state *LocaleItemAggregateDetailState) addDetail(aggregate LocaleItemAggregate) {
-	slog.Info("----on persist detail")
 	err := state.persistDetail(aggregate)
 	if err != nil {
 		slog.Error("error on persist detail", slog.String("err", err.Error()))
