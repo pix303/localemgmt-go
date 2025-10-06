@@ -4,7 +4,7 @@ _.file = '.env.json'
 [tasks.dev]
 run = [
        'clear',
-       'go run actor-facade/main.go | fx'
+       'go run actor-facade/main.go | jq .'
 ]
 
 [tasks.test]
@@ -13,5 +13,6 @@ run = [
        'dlv debug actor-facade/main.go'
 ]
 
-[tools]
-"go:github.com/nats-io/natscli/nats" = "latest"
+# [tools]
+# "go:github.com/nats-io/natscli/nats" = "latest",
+# "jq"
