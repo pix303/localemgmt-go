@@ -58,14 +58,6 @@ type GetLocaleItemAggregateDetailBodyResult struct {
 	Aggregate LocaleItemAggregate
 }
 
-type GetContextBody struct {
-	Id string
-}
-
-type GetContextBodyResult struct {
-	Items []LocaleItemList
-}
-
 func (state *LocaleItemAggregateDetailState) Process(msg actor.Message) {
 	switch payload := msg.Body.(type) {
 	case AddLocaleItemAggregateDetailBody:
@@ -76,14 +68,8 @@ func (state *LocaleItemAggregateDetailState) Process(msg actor.Message) {
 			slog.Error("error on get detail", slog.String("err", err.Error()))
 		}
 
-		resultMsg := actor.NewMessage(
-			msg.From,
-			msg.To,
-			result,
-			false,
-		)
-
 		if msg.WithReturn {
+			resultMsg := actor.NewReturnMessage(GetLocaleItemAggregateDetailBodyResult{Aggregate: result}, msg)
 			msg.ReturnChan <- actor.NewWrappedMessage(&resultMsg, err)
 		}
 	}

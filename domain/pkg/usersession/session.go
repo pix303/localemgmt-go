@@ -21,9 +21,16 @@
 package usersession
 
 import (
+	"errors"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pix303/crypt-util-go/pkg/crypt"
+)
+
+var (
+	ErrCryptKeyNotFound = errors.New("crypt key not found")
 )
 
 type UserSession struct {
@@ -35,14 +42,24 @@ type UserSession struct {
 	Archived       bool      `db:"archived"`
 }
 
-func NewUserSession(subjectId string, refreshToken string) UserSession {
+func NewUserSession(subjectId string, refreshToken string) (UserSession, error) {
 	expireAt := time.Now().AddDate(0, 0, 10)
+	crykey := os.Getenv("REFRESH_TOKEN_CKEY")
+	if crykey == "" {
+		return UserSession{}, ErrCryptKeyNotFound
+	}
+
+	crt, err := crypt.Encrypt([]byte(refreshToken), []byte(crykey))
+	if err != nil {
+		return UserSession{}, err
+	}
+
 	return UserSession{
 		SubjectID:      subjectId,
 		SessionId:      uuid.New(),
 		ExpireAt:       expireAt,
-		RefreshToken:   refreshToken,
+		RefreshToken:   crt,
 		RefreshCounter: 0,
 		Archived:       false,
-	}
+	}, nil
 }

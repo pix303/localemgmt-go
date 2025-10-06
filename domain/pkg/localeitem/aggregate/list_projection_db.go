@@ -40,6 +40,14 @@ type AddLocaleItemAggregateListBody struct {
 	Aggregate LocaleItemAggregate
 }
 
+type GetContextBody struct {
+	Id string
+}
+
+type GetContextBodyResult struct {
+	Items []LocaleItemList
+}
+
 func (state *LocaleItemAggregateListState) Process(msg actor.Message) {
 	switch payload := msg.Body.(type) {
 	case AddLocaleItemAggregateListBody:
@@ -49,8 +57,8 @@ func (state *LocaleItemAggregateListState) Process(msg actor.Message) {
 		if err != nil {
 			slog.Error("error on persist list", slog.String("err", err.Error()))
 		}
-		returnMsg := actor.NewReturnMessage(GetContextBodyResult{Items: result}, msg)
 		if msg.WithReturn {
+			returnMsg := actor.NewReturnMessage(GetContextBodyResult{Items: result}, msg)
 			msg.ReturnChan <- actor.NewWrappedMessage(&returnMsg, err)
 		}
 	}

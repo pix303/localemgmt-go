@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS locale.user(
 
 CREATE TABLE IF NOT EXISTS locale.session(
   subject_id varchar(128) NOT NULL,
-  refresh_token varchar(128) NOT NULL,
+  refresh_token varchar(2048) NOT NULL,
   refresh_counter int NOT NULL DEFAULT 0,
   session_id varchar(128) NOT NULL,
   session_expire_at timestamptz,
