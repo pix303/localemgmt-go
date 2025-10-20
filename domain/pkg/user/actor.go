@@ -44,21 +44,24 @@ locale.user (
 	email,
 	name,
 	contexts,
-	role
+	role,
+	picture
 )
 VALUES (
 	:subject_id,
 	:email,
 	:name,
 	:contexts,
-	:role
+	:role,
+	:picture
 )
 ON CONFLICT (subject_id)
 DO UPDATE SET
     email = :email,
     name = :name,
     contexts = :contexts,
-    role = :role;
+    role = :role,
+    picture = :picture;
 `
 
 func (state UserActorState) updateUser(user User) error {
@@ -81,11 +84,13 @@ func (state UserActorState) updateUser(user User) error {
 }
 
 func (state UserActorState) getUser(subjectId string) (User, error) {
-	var user User
-	err := state.repository.Select(&user, "SELECT * FROM locale.user WHERE subject_id = $1;", subjectId)
+	var userForDB UserForDB
+	err := state.repository.Get(&userForDB, "SELECT * FROM locale.user WHERE subject_id = $1;", subjectId)
 	if err != nil {
-		return user, err
+		return User{}, err
 	}
+
+	user := userForDB.ConvertInUser()
 	return user, nil
 }
 
@@ -95,6 +100,10 @@ type UpdateUserMessageBody struct {
 
 type RetriveUserMessageBody struct {
 	SubjectID string
+}
+
+type RetriveUserMessageBodyResult struct {
+	User User
 }
 
 func (state *UserActorState) Process(msg actor.Message) {
@@ -116,7 +125,7 @@ func (state *UserActorState) Process(msg actor.Message) {
 	case RetriveUserMessageBody:
 		user, err := state.getUser(payload.SubjectID)
 		if msg.WithReturn {
-			returnMsg := actor.NewReturnMessage(user, msg)
+			returnMsg := actor.NewReturnMessage(RetriveUserMessageBodyResult{user}, msg)
 			msg.ReturnChan <- actor.NewWrappedMessage(&returnMsg, err)
 		}
 	}

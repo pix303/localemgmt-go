@@ -44,10 +44,17 @@ type CreateSessionItemMsgBodyResult struct {
 	SessionID string
 }
 
+type RetriveSessionMsgBody struct {
+	SessionId string
+}
+
+type RetriveSessionMsgBodyResult struct {
+	Session UserSession
+}
+
 func (state *UserSessionActorState) Process(msg actor.Message) {
 	switch payload := msg.Body.(type) {
 	case CreateSessionItemMsgBody:
-		slog.Info("CreateSessionItemMsgBody")
 		sid, err := state.createSession(payload.SubjectID, payload.RefreshToken)
 		sids := ""
 		if sid != nil {
@@ -55,6 +62,13 @@ func (state *UserSessionActorState) Process(msg actor.Message) {
 		}
 		if msg.WithReturn {
 			returnMsg := actor.NewReturnMessage(CreateSessionItemMsgBodyResult{SessionID: sids}, msg)
+			msg.ReturnChan <- actor.NewWrappedMessage(&returnMsg, err)
+		}
+
+	case RetriveSessionMsgBody:
+		session, err := state.getSession(payload.SessionId)
+		if msg.WithReturn {
+			returnMsg := actor.NewReturnMessage(RetriveSessionMsgBodyResult{session}, msg)
 			msg.ReturnChan <- actor.NewWrappedMessage(&returnMsg, err)
 		}
 	}
@@ -107,6 +121,15 @@ func (state UserSessionActorState) createSession(subjectId string, refreshToken 
 	}
 
 	return &s.SessionId, nil
+}
+
+func (state UserSessionActorState) getSession(sessionId string) (UserSession, error) {
+	result := UserSession{}
+	err := state.repository.Get(&result, "SELECT * FROM locale.session WHERE session_id = $1", sessionId)
+	if err != nil {
+		return UserSession{}, err
+	}
+	return result, nil
 }
 
 func (state UserSessionActorState) GetState() any {

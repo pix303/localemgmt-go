@@ -22,16 +22,16 @@ const (
 )
 
 type UserBase struct {
-	SubjectID string   `db:"subject_id"`
-	Email     string   `db:"email"`
-	Name      string   `db:"name"`
-	Picture   string   `db:"picture"`
-	Role      UserRole `db:"role"`
+	SubjectID string   `db:"subject_id" json:"subjectId"`
+	Email     string   `db:"email" json:"email"`
+	Name      string   `db:"name" json:"name"`
+	Picture   string   `db:"picture" json:"picture"`
+	Role      UserRole `db:"role" json:"role"`
 }
 
 type User struct {
 	UserBase
-	Contexts []string
+	Contexts []string `json:"contexts"`
 }
 
 type UserForDB struct {
@@ -57,4 +57,12 @@ func (u *User) ConvertInUserForDB() UserForDB {
 		UserBase: u.UserBase,
 		Contexts: pq.StringArray(u.Contexts),
 	}
+}
+
+func (u *UserForDB) ConvertInUser() User {
+	return User{
+		UserBase: u.UserBase,
+		Contexts: []string(u.Contexts),
+	}
+
 }
