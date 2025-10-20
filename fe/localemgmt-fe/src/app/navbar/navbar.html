@@ -1,1 +1,29 @@
-<p>navbar works!</p>
+<div class="navbar bg-base-100 shadow-sm">
+  <div class="flex-1">
+    <a class="btn btn-ghost text-xl" href="/">Localemgmt</a>
+  </div>
+  <div class="flex-1">
+    <div class="inline-grid *:[grid-area:1/1]">
+      <div class="status status-error animate-ping"></div>
+      <div class="status status-error"></div>
+    </div>
+    User id authenticated {{userStore.isAuthenticated()}}
+  </div>
+  <div class="flex-none">
+    <div class="dropdown dropdown-end">
+      <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
+        <div class="w-10 rounded-full"></div>
+        <img alt="user profile picture" src="{{userStore.user?.picture()}}" />
+      </div>
+      <ul
+        tabindex="-1"
+        class="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
+      >
+        <li>
+          <a class="justify-between" href="/user-info">Profile</a>
+        </li>
+        <li><a>Logout</a></li>
+      </ul>
+    </div>
+  </div>
+</div>

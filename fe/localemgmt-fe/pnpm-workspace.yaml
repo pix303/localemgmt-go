@@ -1,0 +1,8 @@
+ignoredBuiltDependencies:
+  - lmdb
+  - msgpackr-extract
+
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - '@tailwindcss/oxide'
+  - esbuild
