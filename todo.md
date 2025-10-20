@@ -2,11 +2,13 @@
 
 
 ## eventstore repo with db 
+
     - L - nosql
 
 ## cinecity
-    - M - remote with rabbitq
-    - M - dev.to
+
+    - M - remote with nats
+    - M - post on dev.to
 
 ## api
 
@@ -14,13 +16,18 @@
         - M - search by context + lang + content
 
     - `user/`
-        - L - update contexts 
-        - L - get detail
+        - H - update contexts 
 
 
 ## projections
 
 
 ## auth
-    - M - FE
-    - H - API
+
+    - H refresh token
+    - H logout
+    
+## FE
+
+    - H - show user on head
+    - H - show user page info with actions
