@@ -48,12 +48,12 @@ func (handler *LocaleItemHandler) GetDetail(ctx echo.Context) error {
 		},
 		true,
 	)
-	resultMsg, err := actor.SendMessageWithResponse(msg)
+	result, err := actor.SendMessageWithResponse[aggregate.GetLocaleItemAggregateDetailBodyResult](msg)
 	if err != nil {
 		return err
 	}
 
-	err = ctx.JSON(http.StatusOK, resultMsg.Body)
+	err = ctx.JSON(http.StatusOK, result)
 	if err != nil {
 		return err
 	}
@@ -70,12 +70,13 @@ func (handler *LocaleItemHandler) GetContext(ctx echo.Context) error {
 		},
 		true,
 	)
-	resultMsg, err := actor.SendMessageWithResponse(msg)
+
+	result, err := actor.SendMessageWithResponse[aggregate.GetContextBodyResult](msg)
 	if err != nil {
 		return err
 	}
 
-	err = ctx.JSON(http.StatusOK, resultMsg.Body)
+	err = ctx.JSON(http.StatusOK, result)
 	if err != nil {
 		return err
 	}
@@ -114,19 +115,14 @@ func (handler *LocaleItemHandler) CreateLocaleItem(c echo.Context) error {
 		true,
 	)
 
-	responseMsg, err := actor.SendMessageWithResponse(msg)
+	result, err := actor.SendMessageWithResponse[store.AddEventBodyResult](msg)
 	if err != nil {
 		return ErrStoreCreateEvent
 	}
 
-	if body, ok := responseMsg.Body.(store.AddEventBodyResult); ok {
-		if body.Success {
-			return c.JSON(http.StatusOK, evt)
-		} else {
-			return ErrStoreCreateEvent
-		}
+	if result.Success {
+		return c.JSON(http.StatusOK, evt)
 	}
-
 	return ErrStoreCreateEvent
 }
 
@@ -151,11 +147,9 @@ func (reqHandler *LocaleItemHandler) UpdateTranslation(c echo.Context) error {
 		true,
 	)
 
-	checkResponseMsg, err := actor.SendMessageWithResponse(checkMsg)
-	if responseBody, ok := checkResponseMsg.Body.(store.CheckExistenceByAggregateIDBodyResult); ok {
-		if !responseBody.Exists {
-			return ErrVerifyAggregateExistence
-		}
+	result, err := actor.SendMessageWithResponse[store.CheckExistenceByAggregateIDBodyResult](checkMsg)
+	if !result.Exists {
+		return ErrVerifyAggregateExistence
 	}
 
 	// add update event
@@ -171,17 +165,13 @@ func (reqHandler *LocaleItemHandler) UpdateTranslation(c echo.Context) error {
 		true,
 	)
 
-	addResponseMsg, err := actor.SendMessageWithResponse(addEventMsg)
+	addResult, err := actor.SendMessageWithResponse[store.AddEventBodyResult](addEventMsg)
 	if err != nil {
 		return ErrStoreUpdateEvent
 	}
 
-	if body, ok := addResponseMsg.Body.(store.AddEventBodyResult); ok {
-		if body.Success {
-			return c.JSON(http.StatusOK, evt)
-		} else {
-			return ErrStoreUpdateEvent
-		}
+	if addResult.Success {
+		return c.JSON(http.StatusOK, evt)
 	}
 
 	return ErrStoreUpdateEvent
