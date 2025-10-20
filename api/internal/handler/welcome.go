@@ -8,7 +8,7 @@ import (
 
 func WelcomeWithMessageHandler(c echo.Context) error {
 	result := dto.Message{
-		Content: "Welcome in Localemgmt",
+		Content: "Welcome in Localemgmt API",
 	}
 	return c.JSON(http.StatusOK, result)
 }

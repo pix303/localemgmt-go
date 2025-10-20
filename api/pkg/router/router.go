@@ -25,25 +25,29 @@ func NewRouter() (*LocaleItemRouter, error) {
 	r := echo.New()
 	r.Use(middleware.Logger())
 
-	apiGroup := r.Group(apiVersion)
-	apiGroup.GET("/", handler.WelcomeWithMessageHandler)
-
+	userHandler := handler.NewUserHandler()
 	localeHandler, err := handler.NewLocaleItemHandler()
 	if err != nil {
 		return nil, err
 	}
 
-	userHandler := handler.NewUserHandler()
+	feGroup := r.Group("fe")
+	feGroup.Static("/", "fe/dist")
+
+	apiGroup := r.Group(apiVersion)
+	apiGroup.GET("/test", handler.WelcomeWithMessageHandler)
 
 	localeItemGroup := apiGroup.Group("/localeitem")
+	localeItemGroup.Use(userHandler.SessionValidator())
 	localeItemGroup.POST("/create", localeHandler.CreateLocaleItem)
 	localeItemGroup.POST("/update", localeHandler.UpdateTranslation)
 	localeItemGroup.GET("/detail/:id", localeHandler.GetDetail)
 	localeItemGroup.GET("/context/:id", localeHandler.GetContext)
 
+	apiGroup.GET("/login", userHandler.Login)
+	apiGroup.GET("/auth-callback", userHandler.AuthCallback)
 	userGroup := apiGroup.Group("/user")
-	userGroup.GET("/login", userHandler.Login)
-	userGroup.GET("/auth-callback", userHandler.AuthCallback)
+	userGroup.Use(userHandler.SessionValidator())
 	userGroup.GET("/info", userHandler.GetInfo)
 
 	router := LocaleItemRouter{r}
@@ -72,31 +76,31 @@ func NewLocaleItemRouterState() (*LocaleItemRouterState, error) {
 
 const Port = 8083
 
-func (this *LocaleItemRouterState) Process(msg actor.Message) {
+func (state *LocaleItemRouterState) Process(msg actor.Message) {
 	switch msg.Body.(type) {
 	case StartRouter:
-		if !this.isRunning {
-			this.mutex.Lock()
+		if !state.isRunning {
+			state.mutex.Lock()
 			slog.Info("Starting server", slog.Int("port", Port))
 
-			this.server = &http.Server{
+			state.server = &http.Server{
 				Addr:    fmt.Sprintf("localhost:%d", Port),
-				Handler: this.RouterInstance.Router,
+				Handler: state.RouterInstance.Router,
 			}
 
 			go func() {
-				err := this.server.ListenAndServe()
+				err := state.server.ListenAndServe()
 				if err != nil && err != http.ErrServerClosed {
 					slog.Error("http server fail:", slog.String("err", err.Error()))
 				}
 			}()
 
-			this.server.RegisterOnShutdown(func() {
+			state.server.RegisterOnShutdown(func() {
 				slog.Info("Server shutdown completely")
 			})
 
-			this.isRunning = true
-			this.mutex.Unlock()
+			state.isRunning = true
+			state.mutex.Unlock()
 		} else {
 			slog.Info("Server is already running, start message ignored")
 		}
@@ -106,19 +110,19 @@ func (this *LocaleItemRouterState) Process(msg actor.Message) {
 	}
 }
 
-func (this *LocaleItemRouterState) GetState() any {
+func (state *LocaleItemRouterState) GetState() any {
 	return nil
 }
 
-func (this *LocaleItemRouterState) Shutdown() {
-	if this.isRunning {
-		this.mutex.Lock()
+func (state *LocaleItemRouterState) Shutdown() {
+	if state.isRunning {
+		state.mutex.Lock()
 
 		slog.Info("Stopping server on port 8080")
 		ctx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(5*time.Second))
 		defer cancelFunc()
 
-		err := this.server.Shutdown(ctx)
+		err := state.server.Shutdown(ctx)
 		if err != nil {
 			//it's not a real error but a info
 			if err == http.ErrServerClosed {
@@ -129,7 +133,7 @@ func (this *LocaleItemRouterState) Shutdown() {
 			return
 		}
 
-		this.mutex.Unlock()
+		state.mutex.Unlock()
 	} else {
 		slog.Info("Server is already stopped on port 8080")
 	}
