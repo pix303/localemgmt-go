@@ -20,4 +20,7 @@ const initialState: UserState = {
   user: undefined,
 };
 
-export const UserStore = signalStore(withState(initialState));
+export const UserStore = signalStore(
+  { providedIn: 'root' },
+  withState(initialState)
+);
