@@ -8,7 +8,6 @@ import (
 	"github.com/pix303/localemgmt-go/api/pkg/router"
 	"github.com/pix303/localemgmt-go/domain/pkg/localeitem/aggregate"
 	"github.com/pix303/localemgmt-go/domain/pkg/user"
-	"github.com/pix303/localemgmt-go/domain/pkg/usersession"
 )
 
 func main() {
@@ -60,17 +59,6 @@ func main() {
 	err = actor.RegisterActor(userActor)
 	if err != nil {
 		slog.Error("error on startup user actor", slog.String("err", err.Error()))
-	}
-
-	userSessionActor, err := usersession.NewUserSessionActor()
-	if err != nil {
-		slog.Error("error on startup user session actor", slog.String("err", err.Error()))
-		return
-	}
-
-	err = actor.RegisterActor(userSessionActor)
-	if err != nil {
-		slog.Error("error on startup user session actor", slog.String("err", err.Error()))
 	}
 
 	startEvent := router.StartRouter{}
