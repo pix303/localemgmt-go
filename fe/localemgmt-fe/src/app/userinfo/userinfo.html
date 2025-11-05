@@ -1,20 +1,22 @@
 @if(user() != undefined){
 <div class="card w-96 bg-base-100 card-lg shadow-sm">
 	<div class="card-body">
-		<h2 class="card-title">{{user().?.name}}</h2>
-		<h3>Contexts</h3>
+		<h2 class="card-title">{{username()}}</h2>
+		<h3>Contexts:</h3>
 		<ul>
-			@for(context of user().?.contexts; track context){
+			@for(context of contexts(); track context){
 			<li>{{context}}</li>
 			} @empty {
 			<p>no contexts</p>
 			}
 		</ul>
 		<div class="justify-end card-actions">
-			<button class="btn btn-primary">Buy Now</button>
+			<button class="btn btn-primary">Manage contexts</button>
+			<button class="btn btn-alert" (click)="logout()">Logout</button>
 		</div>
 	</div>
 </div>
 }@else{
-<p>user not defined</p>
+<p>No user logged in</p>
+<button class="btn btn-primary" (click)="login()">Login with Google</button>
 }

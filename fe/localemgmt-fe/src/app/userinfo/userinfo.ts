@@ -7,7 +7,17 @@ import { UserStore } from '../../store/user/user-store';
   templateUrl: './userinfo.html',
   styleUrl: './userinfo.css',
 })
-export class Userinfo {
+export class UserInfoComponent {
   readonly userStore = inject(UserStore);
   readonly user = computed(() => this.userStore.user?.());
+  readonly contexts = computed(() => this.user()?.contexts ?? []);
+  readonly username = computed(() => this.user()?.name ?? "");
+
+  login() {
+    this.userStore.login();
+  }
+
+  logout() {
+    this.userStore.logout();
+  }
 }

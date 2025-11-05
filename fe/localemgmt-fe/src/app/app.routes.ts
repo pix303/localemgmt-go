@@ -1,16 +1,20 @@
 import { Routes } from '@angular/router';
 import { Home } from './home/home';
-import { Userinfo } from './userinfo/userinfo';
+import { UserInfoComponent } from './userinfo/userinfo';
+import { DebugComponent } from './debug/debug';
 
 export const routes: Routes = [
-
   {
     path: 'home',
     component: Home,
   },
   {
     path: 'user-info',
-    component: Userinfo,
+    component: UserInfoComponent,
+  },
+  {
+    path: 'debug',
+    component: DebugComponent,
   },
   {
     path: '',
