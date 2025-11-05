@@ -1,16 +1,22 @@
 package user
 
 import (
-	"github.com/lib/pq"
+	"errors"
+	"os"
+
+	"github.com/pix303/crypt-util-go/pkg/crypt"
+)
+
+var (
+	ErrCryptKeyNotFound = errors.New("crypt key not found")
 )
 
 type UserInfoReponseBody struct {
-	SubjectID     string `json:"sub"`
-	Email         string `json:"email"`
-	VerifiedEmail bool   `json:"verified_email"`
-	Name          string `json:"name"`
-	Picture       string `json:"picture"`
-	RefreshToken  string
+	SubjectID    string `json:"sub"`
+	Email        string `json:"email"`
+	Name         string `json:"name"`
+	Picture      string `json:"picture"`
+	RefreshToken string
 }
 
 type UserRole int
@@ -21,48 +27,35 @@ const (
 	Reader     UserRole = 3
 )
 
-type UserBase struct {
-	SubjectID string   `db:"subject_id" json:"subjectId"`
-	Email     string   `db:"email" json:"email"`
-	Name      string   `db:"name" json:"name"`
-	Picture   string   `db:"picture" json:"picture"`
-	Role      UserRole `db:"role" json:"role"`
-}
-
 type User struct {
-	UserBase
-	Contexts []string `json:"contexts"`
+	SubjectID    string   `db:"subject_id" json:"subjectId"`
+	Email        string   `db:"email" json:"email"`
+	Name         string   `db:"name" json:"name"`
+	Picture      string   `db:"picture" json:"picture"`
+	Role         UserRole `db:"role" json:"role"`
+	RefreshToken string   `db:"refresh_token" json:"-"`
+	Contexts     []string `json:"contexts"`
 }
 
-type UserForDB struct {
-	UserBase
-	Contexts pq.StringArray `db:"contexts"`
-}
+func NewUser(sub string, email string, name string, picture string, userRole UserRole, refreshToken string) (User, error) {
 
-func NewUser(sub string, email string, name string, picture string, userRole UserRole) User {
+	crykey := os.Getenv("REFRESH_TOKEN_CKEY")
+	if crykey == "" {
+		return User{}, ErrCryptKeyNotFound
+	}
+
+	crt, err := crypt.Encrypt([]byte(refreshToken), []byte(crykey))
+	if err != nil {
+		return User{}, err
+	}
+
 	return User{
-		UserBase: UserBase{
-			sub,
-			email,
-			name,
-			picture,
-			userRole,
-		},
-		Contexts: make([]string, 0),
-	}
-}
-
-func (u *User) ConvertInUserForDB() UserForDB {
-	return UserForDB{
-		UserBase: u.UserBase,
-		Contexts: pq.StringArray(u.Contexts),
-	}
-}
-
-func (u *UserForDB) ConvertInUser() User {
-	return User{
-		UserBase: u.UserBase,
-		Contexts: []string(u.Contexts),
-	}
-
+		sub,
+		email,
+		name,
+		picture,
+		userRole,
+		crt,
+		make([]string, 0),
+	}, nil
 }

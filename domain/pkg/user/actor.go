@@ -39,34 +39,33 @@ func NewUserActor() (*actor.Actor, error) {
 
 var insertUpdateUser string = `--insert sql
 INSERT INTO
-locale.user (
+locale."user" (
 	subject_id,
 	email,
 	name,
-	contexts,
 	role,
-	picture
+	picture,
+	refresh_token
 )
 VALUES (
 	:subject_id,
 	:email,
 	:name,
-	:contexts,
 	:role,
-	:picture
+	:picture,
+	:refresh_token
 )
 ON CONFLICT (subject_id)
 DO UPDATE SET
     email = :email,
     name = :name,
-    contexts = :contexts,
     role = :role,
-    picture = :picture;
+    picture = :picture,
+    refresh_token = :refresh_token;
 `
 
 func (state UserActorState) updateUser(user User) error {
-	udb := user.ConvertInUserForDB()
-	result, err := state.repository.NamedExec(insertUpdateUser, udb)
+	result, err := state.repository.NamedExec(insertUpdateUser, user)
 	if err != nil {
 		return err
 	}
@@ -84,18 +83,20 @@ func (state UserActorState) updateUser(user User) error {
 }
 
 func (state UserActorState) getUser(subjectId string) (User, error) {
-	var userForDB UserForDB
-	err := state.repository.Get(&userForDB, "SELECT * FROM locale.user WHERE subject_id = $1;", subjectId)
+	var result User
+	err := state.repository.Get(&result, "SELECT * FROM locale.user WHERE subject_id = $1;", subjectId)
 	if err != nil {
 		return User{}, err
 	}
-
-	user := userForDB.ConvertInUser()
-	return user, nil
+	return result, nil
 }
 
 type UpdateUserMessageBody struct {
 	User UserInfoReponseBody
+}
+
+type UpdateUserMessageBodyResult struct {
+	Success bool
 }
 
 type RetriveUserMessageBody struct {
@@ -109,17 +110,22 @@ type RetriveUserMessageBodyResult struct {
 func (state *UserActorState) Process(msg actor.Message) {
 	switch payload := msg.Body.(type) {
 	case UpdateUserMessageBody:
-		u := NewUser(
+		u, err := NewUser(
 			payload.User.SubjectID,
 			payload.User.Email,
 			payload.User.Name,
 			payload.User.Picture,
 			Translator, // TODO: make sense role hardcoded?
+			payload.User.RefreshToken,
 		)
 
-		err := state.updateUser(u)
+		if err == nil {
+			err = state.updateUser(u)
+		}
+
 		if msg.WithReturn {
-			msg.ReturnChan <- actor.NewWrappedMessage(nil, err)
+			returnMsg := actor.NewReturnMessage(UpdateUserMessageBodyResult{err != nil}, msg)
+			msg.ReturnChan <- actor.NewWrappedMessage(&returnMsg, err)
 		}
 
 	case RetriveUserMessageBody:
