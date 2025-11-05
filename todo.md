@@ -16,8 +16,12 @@
         - M - search by context + lang + content
 
     - `user/`
-        - H refresh token
-        - H update contexts 
+        - H update contexts
+
+    - `lang-contexts/`
+        - creare event store
+        - create events
+        - add api
 
 
 ## projections
