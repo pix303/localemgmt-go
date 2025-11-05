@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -24,6 +25,11 @@ func NewRouter() (*LocaleItemRouter, error) {
 
 	r := echo.New()
 	r.Use(middleware.Logger())
+	r.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"http://localhost:4200"},
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
+		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
+	}))
 
 	userHandler := handler.NewUserHandler()
 	localeHandler, err := handler.NewLocaleItemHandler()
@@ -31,8 +37,22 @@ func NewRouter() (*LocaleItemRouter, error) {
 		return nil, err
 	}
 
-	feGroup := r.Group("fe")
-	feGroup.Static("/", "fe/dist")
+	///////////////////////////////////////////
+	// fe routes
+	feBaseDistPath := filepath.Join("fe", "dist", "browser")
+	r.Group("/fe", middleware.StaticWithConfig(middleware.StaticConfig{
+		Root:   feBaseDistPath,
+		Index:  "index.html",
+		HTML5:  true,
+		Browse: false,
+	}))
+
+	r.GET("/fe/*", func(c echo.Context) error {
+		slog.Warn("fallback fe/*", slog.String("path", c.Request().URL.Path))
+		feIndexPath := filepath.Join(feBaseDistPath, "index.html")
+		return c.File(feIndexPath)
+	})
+	///////////////////////////////////////////
 
 	apiGroup := r.Group(apiVersion)
 	apiGroup.GET("/test", handler.WelcomeWithMessageHandler)
@@ -49,6 +69,7 @@ func NewRouter() (*LocaleItemRouter, error) {
 	userGroup := apiGroup.Group("/user")
 	userGroup.Use(userHandler.SessionValidator())
 	userGroup.GET("/info", userHandler.GetInfo)
+	userGroup.POST("/logout", userHandler.Logout)
 
 	router := LocaleItemRouter{r}
 	return &router, nil
