@@ -16,18 +16,13 @@
         - M - search by context + lang + content
 
     - `user/`
-        - H - update contexts 
+        - H refresh token
+        - H update contexts 
 
 
 ## projections
 
-
-## auth
-
-    - H refresh token
-    - H logout
-    
+   
 ## FE
 
-    - H - show user on head
-    - H - show user page info with actions
+    - H - on user page login action
